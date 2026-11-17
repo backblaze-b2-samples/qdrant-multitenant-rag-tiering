@@ -33,6 +33,9 @@ threshold is parked as a verified Qdrant snapshot in B2 and dropped from the nod
 - `TieringRunResult {candidates, parked, skipped[{tenant_id, reason}], dry_run}`
 
 ## Flow
+Each step sets the tenant's in-memory state, in order `snapshotting` (1), `uploading` (2),
+`verifying` (3-4) and `dropping` (5), so the UI can show the stage.
+
 1. `POST /collections/tenant_<t>/snapshots` on Qdrant: name, size, sha256 checksum.
 2. Stream `GET .../snapshots/<name>` into a B2 multipart upload (`create_multipart_upload`,
    `upload_part`, `complete_multipart_upload`; `abort_multipart_upload` on any failure),
@@ -58,7 +61,9 @@ restart every clock starts at process start, which can only delay parking.
 
 ## UX States (if applicable)
 - Empty: "No snapshots yet" in snapshot history
-- Loading: badge shows `Snapshotting` / `Verifying` with a spinner; button spinners
+- Loading: badge shows `Snapshotting` / `Uploading` / `Verifying` / `Dropping` with a spinner
+  (polled every second while a park runs); the sweep dialog lists each tenant's stage and
+  "Parked n (of N, when a dry run for that threshold listed the candidates) so far"
 - Error: toast with the server's reason; the tenant stays `Hot`
 
 ## Verification

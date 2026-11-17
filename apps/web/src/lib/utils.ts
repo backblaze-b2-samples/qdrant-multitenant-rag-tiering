@@ -26,3 +26,8 @@ export function formatDate(dateStr: string) {
     minute: "2-digit",
   });
 }
+
+/** Shorten a chart tick to `max` characters (ellipsis included). */
+export function truncateLabel(label: string, max: number): string {
+  return label.length <= max ? label : `${label.slice(0, max - 1)}…`;
+}

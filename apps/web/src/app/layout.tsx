@@ -31,7 +31,10 @@ export default function RootLayout({
               <SidebarProvider>
                   <TooltipProvider>
                     <AppSidebar />
-                    <div className="flex flex-1 flex-col">
+                    {/* min-w-0: without it this flex item grows to its widest
+                        child (e.g. a report table), the page overflows the
+                        viewport and tables never reach their own x-scroll. */}
+                    <div className="flex min-w-0 flex-1 flex-col">
                       <Header />
                       <HealthBanner />
                       <main className="flex-1 overflow-auto p-6 lg:p-8">

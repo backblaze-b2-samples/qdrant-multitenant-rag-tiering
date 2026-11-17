@@ -1,4 +1,5 @@
 import type {
+  BenchmarkProgress,
   BenchmarkRequest,
   DailyUploadCount,
   DeleteFileResponse,
@@ -21,6 +22,7 @@ import type {
   SnapshotEntry,
   TenantCreate,
   TenantDetail,
+  TenantProgress,
   TenantSummary,
   TenantUpdate,
   TieringPolicy,
@@ -322,6 +324,8 @@ export const parkTenant = (tenantId: string) =>
   send<ParkResult>(R.tenantPark, { tenant_id: tenantId });
 export const restoreTenant = (tenantId: string) =>
   send<RestoreResult>(R.tenantRestore, { tenant_id: tenantId });
+export const getTenantProgress = (tenantId: string) =>
+  send<TenantProgress>(R.tenantProgress, { tenant_id: tenantId });
 export const listTenantSnapshots = (tenantId: string) =>
   send<SnapshotEntry[]>(R.tenantSnapshots, { tenant_id: tenantId });
 
@@ -336,6 +340,7 @@ export const listReports = () => send<ReportSummary[]>(R.reports, {});
 export const getReport = (runId: string) => send<LatencyReport>(R.reportDetail, { run_id: runId });
 export const runBenchmark = (body: BenchmarkRequest) =>
   send<LatencyReport>(R.reportRun, {}, body);
+export const getBenchmarkProgress = () => send<BenchmarkProgress>(R.reportProgress, {});
 
 export const listLibrary = (tenantId?: string, kind?: string) => {
   const query = new URLSearchParams();

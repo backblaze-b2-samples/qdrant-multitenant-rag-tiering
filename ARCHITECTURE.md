@@ -98,7 +98,8 @@ State is derived from what exists, never stored twice:
 | `hot` | collection `tenant_<id>` exists on the node |
 | `parked` | no collection, and `rag/snapshots/<id>/latest.json` exists in B2 |
 | `empty` | `_tenant.json` exists but nothing is indexed and no snapshot exists |
-| `snapshotting` / `verifying` / `restoring` | in memory only, while a park or restore runs |
+| `writing` / `embedding` / `upserting` | in memory only, while a create (or re-indexing edit) runs |
+| `snapshotting` / `uploading` / `verifying` / `dropping` / `restoring` | in memory only, while a park (in that order) or restore runs |
 
 A per-tenant `asyncio.Lock` (`app/service/state.py`) serialises park, restore,
 edit, delete and query. Idle clocks are in memory; after a restart every clock
@@ -205,8 +206,10 @@ still in step.
 | `GET /metrics` | — | _server-only_ |
 | `GET /reports` | `ReportSummary[]` | `reports` |
 | `GET /reports/{run_id}` | `LatencyReport` | `reportDetail` |
+| `GET /reports/progress` | `BenchmarkProgress` | `reportProgress` |
 | `GET /tenants` | `TenantSummary[]` | `tenants` |
 | `GET /tenants/{tenant_id}` | `TenantDetail` | `tenantDetail` |
+| `GET /tenants/{tenant_id}/progress` | `TenantProgress` | `tenantProgress` |
 | `GET /tenants/{tenant_id}/snapshots` | `SnapshotEntry[]` | `tenantSnapshots` |
 | `GET /tiering/policy` | `TieringPolicy` | `tieringPolicy` |
 | `GET /tiering/stats` | `TieringStats` | `tieringStats` |

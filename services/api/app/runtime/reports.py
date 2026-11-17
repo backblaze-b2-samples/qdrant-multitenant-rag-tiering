@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from app.runtime.errors import http_errors
 from app.service import reports
-from app.types.reports import BenchmarkRequest, LatencyReport, ReportSummary
+from app.types.reports import BenchmarkProgress, BenchmarkRequest, LatencyReport, ReportSummary
 
 router = APIRouter()
 
@@ -20,6 +20,12 @@ async def run_benchmark_endpoint(body: BenchmarkRequest):
 def list_reports_endpoint():
     with http_errors():
         return reports.list_reports()
+
+
+@router.get("/reports/progress", response_model=BenchmarkProgress)
+def benchmark_progress_endpoint():
+    """The benchmark running on this process (phase, tenant, n of N), if any."""
+    return reports.get_progress()
 
 
 @router.get("/reports/{run_id}", response_model=LatencyReport)

@@ -17,7 +17,7 @@ import { SnapshotHistory } from "@/components/tenants/snapshot-history";
 import { StateBadge } from "@/components/tenants/state-badge";
 import { previewHref } from "@/lib/preview-deep-link";
 import { useParkTenant, useRestoreTenant, useTenant } from "@/lib/queries";
-import { formatAge, formatMs } from "@/lib/tenant-state";
+import { formatAge, formatMs, parkStageText, vectorMemoryText } from "@/lib/tenant-state";
 import { formatDate, humanizeBytes } from "@/lib/utils";
 
 function Fact({ label, value }: { label: string; value: string | number }) {
@@ -30,9 +30,12 @@ function Fact({ label, value }: { label: string; value: string | number }) {
 }
 
 export function TenantDetailView({ tenantId }: { tenantId: string }) {
-  const { data: tenant, isLoading, error, refetch } = useTenant(tenantId);
   const park = useParkTenant(tenantId);
   const restore = useRestoreTenant(tenantId);
+  // Poll fast while a park or restore runs, so the badge walks through each stage.
+  const { data: tenant, isLoading, error, refetch } = useTenant(tenantId, {
+    busy: park.isPending || restore.isPending,
+  });
 
   if (isLoading) {
     return <Skeleton className="h-64 w-full" role="status" aria-label="Loading tenant" />;
@@ -51,11 +54,14 @@ export function TenantDetailView({ tenantId }: { tenantId: string }) {
       />
     );
   }
-  if (error || !tenant) {
+  // A failed background poll keeps the last good data on screen (it polls
+  // every second during a park); only a tenant never loaded shows the error.
+  if (!tenant) {
     return <ErrorState error={error} onRetry={() => refetch()} />;
   }
 
   const busy = park.isPending || restore.isPending;
+  const parkStage = park.isPending ? parkStageText(tenant.state) : null;
 
   return (
     <div className="space-y-6">
@@ -68,6 +74,11 @@ export function TenantDetailView({ tenantId }: { tenantId: string }) {
           <p className="mt-1.5 font-mono text-xs text-muted-foreground">
             {tenant.tenant_id} · collection tenant_{tenant.tenant_id}
           </p>
+          {park.isPending && (
+            <p className="mt-1.5 text-sm text-muted-foreground" aria-live="polite" data-testid="park-stage">
+              Parking: {parkStage ?? "starting…"}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -91,7 +102,7 @@ export function TenantDetailView({ tenantId }: { tenantId: string }) {
             ) : (
               <CloudUpload aria-hidden="true" className="h-3.5 w-3.5" />
             )}
-            Park now
+            {park.isPending ? "Parking…" : "Park now"}
           </Button>
           <Button
             size="sm"
@@ -133,7 +144,7 @@ export function TenantDetailView({ tenantId }: { tenantId: string }) {
           <dl className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <Fact label="Points" value={tenant.point_count} />
             <Fact label="Documents" value={tenant.document_count} />
-            <Fact label="Vector memory (est.)" value={humanizeBytes(tenant.vector_bytes_estimate)} />
+            <Fact label="Vector memory in Qdrant (est.)" value={vectorMemoryText(tenant)} />
             <Fact label="Last query" value={formatAge(tenant.last_query_at)} />
             <Fact
               label="Latest snapshot"

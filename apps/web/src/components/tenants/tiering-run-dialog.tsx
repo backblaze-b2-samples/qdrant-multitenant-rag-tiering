@@ -24,8 +24,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { useRunTiering, useTieringPolicy } from "@/lib/queries";
+import { useRunTiering, useTenants, useTieringPolicy } from "@/lib/queries";
 import { idleOptionsFor } from "@/lib/tenant-form";
+import { sweepProgress } from "@/lib/tenant-state";
 
 /** Run the idle policy now: dry run by default, so nothing moves until asked. */
 export function TieringRunDialog() {
@@ -33,21 +34,34 @@ export function TieringRunDialog() {
   const [idle, setIdle] = useState<string | null>(null);
   const [dryRun, setDryRun] = useState(true);
   const [result, setResult] = useState<TieringRunResult | null>(null);
+  // The last dry run's candidates and the threshold they were found with.
+  const [lastDryRun, setLastDryRun] = useState<{ idle: string; candidates: string[] } | null>(null);
+  const [hotAtStart, setHotAtStart] = useState<string[]>([]);
   const run = useRunTiering();
+  // Polled fast while a real sweep runs, so each tenant's park stage shows.
+  const parking = run.isPending && !run.variables?.dry_run;
+  const { data: tenants = [] } = useTenants({ busy: parking });
   const options = idleOptionsFor(policy?.idle_seconds);
   const idleValue = idle ?? String(policy?.idle_seconds ?? 604_800);
 
-  const submit = () =>
+  // A dry run's candidates for the same threshold give the sweep its "of N".
+  const knownCandidates = lastDryRun?.idle === idleValue ? lastDryRun.candidates : null;
+  const progress = parking ? sweepProgress(hotAtStart, tenants, knownCandidates) : null;
+
+  const submit = () => {
+    setHotAtStart(tenants.filter((t) => t.state === "hot").map((t) => t.tenant_id));
     run.mutate(
       { idle_seconds: Number(idleValue), dry_run: dryRun },
       {
         onSuccess: (r) => {
           setResult(r);
+          setLastDryRun(r.dry_run ? { idle: idleValue, candidates: r.candidates } : null);
           if (!r.dry_run) toast.success(`Parked ${r.parked.length} tenant(s) in B2`);
         },
         onError: (error) => toast.error("Tiering run failed", { description: error.message }),
       }
     );
+  };
 
   return (
     <Dialog onOpenChange={(open) => !open && setResult(null)}>
@@ -89,7 +103,28 @@ export function TieringRunDialog() {
             </div>
             <Switch id="dry-run" checked={dryRun} onCheckedChange={setDryRun} />
           </div>
-          {result && (
+          {progress && (
+            <div
+              className="space-y-1 rounded-md border border-border bg-muted/30 p-3 text-sm"
+              aria-live="polite"
+              data-testid="sweep-progress"
+            >
+              <p className="font-medium">
+                Parked {progress.done}
+                {progress.total === null ? "" : ` of ${progress.total}`} so far
+              </p>
+              {progress.active.length === 0 ? (
+                <p className="text-muted-foreground">Checking idle tenants…</p>
+              ) : (
+                progress.active.map((a) => (
+                  <p key={a.tenant_id}>
+                    <span className="font-mono text-xs">{a.tenant_id}</span>: {a.stage}
+                  </p>
+                ))
+              )}
+            </div>
+          )}
+          {result && !run.isPending && (
             <div className="space-y-1 rounded-md border border-border bg-muted/30 p-3 text-sm" aria-live="polite">
               <p>
                 <span className="font-medium">Candidates:</span>{" "}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { humanizeBytes, formatDate } from "./utils";
+import { humanizeBytes, formatDate, truncateLabel } from "./utils";
 
 describe("humanizeBytes", () => {
   it("formats bytes with no decimals", () => {
@@ -25,5 +25,13 @@ describe("formatDate", () => {
     // Month is stable across realistic timezones for a mid-month date;
     // day/time are locale/tz-dependent so we don't assert them exactly.
     expect(formatDate("2026-02-14T09:05:00Z")).toContain("Feb");
+  });
+});
+
+describe("truncateLabel", () => {
+  it("keeps short labels and shortens long ones with an ellipsis", () => {
+    expect(truncateLabel("acme-legal", 14)).toBe("acme-legal");
+    expect(truncateLabel("oss-readmes-b30419", 14)).toBe("oss-readmes-b…");
+    expect(truncateLabel("oss-readmes-b30419", 14)).toHaveLength(14);
   });
 });

@@ -1,4 +1,6 @@
-import type { LatencyReport } from "@qdrant-multitenant-rag-tiering/shared";
+import type { LatencyReport, TenantLatency } from "@qdrant-multitenant-rag-tiering/shared";
+
+import { humanizeBytes } from "@/lib/utils";
 
 /** One bar group per tenant: the three numbers the report is read for. */
 export interface LatencyRow {
@@ -49,4 +51,17 @@ export function restorePenalty(report: LatencyReport): number | null {
 
 export function allResultsMatch(report: LatencyReport): boolean {
   return report.tenants.every((t) => t.results_match);
+}
+
+/**
+ * Memory-freed figures for the Figures table, so they are readable without
+ * hovering a chart bar. A non-positive observed drop reads "0 B" (the
+ * allocator may lag); a missing metric reads "n/a".
+ */
+export function memoryFreedCells(t: TenantLatency): { estimate: string; observed: string } {
+  const rss = t.memory_freed.node_rss_delta_bytes;
+  return {
+    estimate: humanizeBytes(t.memory_freed.vector_bytes_estimate),
+    observed: rss === null ? "n/a" : humanizeBytes(Math.max(0, rss)),
+  };
 }

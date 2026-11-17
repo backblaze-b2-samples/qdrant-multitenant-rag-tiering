@@ -148,3 +148,24 @@ async def test_concurrent_query_during_park_waits_on_the_lock(client, rag):
     assert events.index(("delete_collection", COLL)) < events.index(("restore", COLL))
     last_search = max(i for i, event in enumerate(events) if event == ("search", COLL))
     assert events.index(("restore", COLL)) < last_search
+
+
+@pytest.mark.asyncio
+async def test_park_reports_each_stage_in_order(client, rag, monkeypatch):
+    """The UI polls the tenant state during a park, so every step is visible."""
+    from app.service import state
+
+    await create_tenant(client, T)
+    seen: list[str | None] = []
+    original = state.set_transitional
+
+    def record(tenant_id, value):
+        seen.append(value)
+        original(tenant_id, value)
+
+    monkeypatch.setattr(state, "set_transitional", record)
+
+    result = await park_tenant(T)
+
+    assert result.verified is True
+    assert seen == ["snapshotting", "uploading", "verifying", "dropping", None]

@@ -27,7 +27,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useReport } from "@/lib/queries";
-import { allResultsMatch, latencyRows, memoryRows, restorePenalty } from "@/lib/report-chart";
+import {
+  allResultsMatch,
+  latencyRows,
+  memoryFreedCells,
+  memoryRows,
+  restorePenalty,
+} from "@/lib/report-chart";
 import { formatMs } from "@/lib/tenant-state";
 import { formatDate, humanizeBytes } from "@/lib/utils";
 
@@ -70,8 +76,8 @@ export function ReportView({ runId }: { runId: string }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
-        <div>
-          <h1 className="page-title">Report {report.run_id}</h1>
+        <div className="min-w-0">
+          <h1 className="page-title break-all">Report {report.run_id}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
             {formatDate(report.created_at)} · Qdrant {report.qdrant_version ?? "unknown"} ·{" "}
             {report.embedding_model}
@@ -151,30 +157,41 @@ export function ReportView({ runId }: { runId: string }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tenant</TableHead>
+                {/* Tenant stays pinned when the table scrolls sideways. */}
+                <TableHead className="sticky left-0 z-10 bg-card">Tenant</TableHead>
                 <TableHead className="text-right">Points</TableHead>
-                <TableHead className="text-right">Warm p50 / p95</TableHead>
-                <TableHead className="text-right">Snapshot</TableHead>
-                <TableHead className="text-right">Upload</TableHead>
-                <TableHead className="text-right">Restore (download + load)</TableHead>
+                <TableHead className="text-right">Warm p50/p95</TableHead>
+                <TableHead className="text-right" title="Snapshot size, and its upload time to B2">
+                  Snapshot (upload)
+                </TableHead>
+                <TableHead className="text-right" title="Restore from B2: download + load">
+                  Restore (dl + load)
+                </TableHead>
                 <TableHead className="text-right">First query</TableHead>
-                <TableHead className="text-right">Post p50 / p95</TableHead>
+                <TableHead className="text-right">Post p50/p95</TableHead>
+                <TableHead className="text-right" title="Vectors + payload freed, estimated">
+                  Freed (est.)
+                </TableHead>
+                <TableHead className="text-right" title="Qdrant resident memory drop, observed">
+                  RSS drop (obs.)
+                </TableHead>
                 <TableHead>Match</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {report.tenants.map((t) => (
+              {report.tenants.map((t) => {
+                const memory = memoryFreedCells(t);
+                return (
                 <TableRow key={t.tenant_id}>
-                  <TableCell className="font-mono text-xs">{t.tenant_id}</TableCell>
+                  <TableCell className="sticky left-0 z-10 bg-card font-mono text-xs">
+                    {t.tenant_id}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{t.point_count}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatMs(t.warm.p50_ms)} / {formatMs(t.warm.p95_ms)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {humanizeBytes(t.snapshot_bytes)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatMs(t.snapshot_upload_ms)}
+                    {humanizeBytes(t.snapshot_bytes)} ({formatMs(t.snapshot_upload_ms)})
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatMs(t.restore.total_ms)} ({formatMs(t.restore.download_ms)} +{" "}
@@ -186,9 +203,12 @@ export function ReportView({ runId }: { runId: string }) {
                   <TableCell className="text-right tabular-nums">
                     {formatMs(t.post_restore.p50_ms)} / {formatMs(t.post_restore.p95_ms)}
                   </TableCell>
+                  <TableCell className="text-right tabular-nums">{memory.estimate}</TableCell>
+                  <TableCell className="text-right tabular-nums">{memory.observed}</TableCell>
                   <TableCell>{t.results_match ? "yes" : "no"}</TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

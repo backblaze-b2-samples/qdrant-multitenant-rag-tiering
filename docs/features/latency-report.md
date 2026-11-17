@@ -27,6 +27,12 @@ first-query-after-restore and post-restore latency, and memory freed, per tenant
   restore {download_ms, load_ms, total_ms}, first_query_after_restore_ms, post_restore,
   memory_freed {vector_bytes_estimate, node_rss_delta_bytes?}, results_match`
 - Side effect: each measured tenant ends hot (it was parked and restored by the run)
+- `GET /reports/progress` -> `BenchmarkProgress {running, phase: warm | park | restore |
+  post_restore, tenant_id, tenants_done, tenants_total, tenant_ids, started_at, last_run_id}`, in memory
+  on the API process; the Reports page reads it on load and polls it every second while a run
+  is live (every 10 s when idle, so a run started elsewhere appears). The checklist ticks the
+  running run's `tenant_ids`. When a run it only watched (e.g. after a reload) ends, it waits
+  for the refreshed reports list (read in parallel) and then toasts "Benchmark finished" with an Open report action
 
 ## Flow
 - Probe queries are the tenant's own corpus sentences, in document order, cycled to N.
@@ -47,7 +53,12 @@ labelled "observed" because the allocator may not return memory immediately.
 
 ## UX States (if applicable)
 - Empty: "No reports yet"
-- Loading: "Benchmarking…" (runs inside the request)
+- Loading: "Benchmarking…" plus "Tenant n of N (<id>): <phase>"; after a reload mid-run the
+  same line appears, Run benchmark stays disabled with that reason, and the tenant under
+  test stays in the checklist (disabled, with its transitional state)
+- Figures table: snapshot (upload), restore (dl + load), freed (est.) and RSS drop (obs.;
+  `0 B` when RSS did not fall, `n/a` when the metric is missing); full meanings in header
+  tooltips, and the Tenant column stays pinned when the table scrolls sideways
 - Error: toast with the reason
 
 ## Verification

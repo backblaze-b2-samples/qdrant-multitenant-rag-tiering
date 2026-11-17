@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Throwaway app-verification specs (gitignored, written per verify run).
+    "e2e/verify/**",
   ]),
   // Generated shadcn/ui components — do not modify or lint strictly
   {

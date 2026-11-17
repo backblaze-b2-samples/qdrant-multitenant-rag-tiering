@@ -5,6 +5,9 @@ import type { NextConfig } from "next";
 // (when B2_PUBLIC_URL_BASE is set on a public bucket), which use the
 // <bucket>.s3.<region>.backblazeb2.com / s3.<region>.backblazeb2.com hosts.
 const nextConfig: NextConfig = {
+  // `next dev` only trusts localhost for its dev resources (HMR); opening the
+  // app at 127.0.0.1 otherwise leaves the page unhydrated on its skeleton.
+  allowedDevOrigins: ["127.0.0.1"],
   transpilePackages: ["@qdrant-multitenant-rag-tiering/shared"],
   images: {
     remotePatterns: [

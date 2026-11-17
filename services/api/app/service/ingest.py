@@ -3,11 +3,13 @@
 import json
 import re
 import uuid
+from collections.abc import Callable
 
 from app.types.ports import ChunkPoint, EmbedderPort, QdrantGatewayPort
 
 CHUNK_WORDS = 120
 OVERLAP_WORDS = 20
+EMBED_BATCH = 16  # chunks per embed call: progress granularity, still batched
 _POINT_NAMESPACE = uuid.UUID("1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d")
 
 
@@ -41,18 +43,29 @@ def index_documents(
     tenant_id: str,
     collection: str,
     documents: list[tuple[str, str]],
+    on_progress: Callable[[str, int, int], None] | None = None,
 ) -> dict[str, tuple[int, int]]:
     """Embed and upsert documents. Returns {filename: (chunks, payload_bytes)}.
 
     Creates the collection, sized from the embedding model, if it is missing.
+    `on_progress(stage, done, total)` reports "embedding" chunk counts (in
+    batches of EMBED_BATCH, so a long document still advances) then "upserting".
     """
+    report = on_progress or (lambda *_: None)
+    chunked = [(filename, chunk_text(text)) for filename, text in documents]
+    total = sum(len(chunks) for _, chunks in chunked)
+    report("embedding", 0, total)
     if collection not in gateway.list_collections():
         gateway.create_collection(collection, embedder.vector_size())
     stats: dict[str, tuple[int, int]] = {}
     points: list[ChunkPoint] = []
-    for filename, text in documents:
-        chunks = chunk_text(text)
-        vectors = embedder.embed(chunks)
+    done = 0
+    for filename, chunks in chunked:
+        vectors: list[list[float]] = []
+        for start in range(0, len(chunks), EMBED_BATCH):
+            vectors += embedder.embed(chunks[start : start + EMBED_BATCH])
+            done += len(chunks[start : start + EMBED_BATCH])
+            report("embedding", done, total)
         size = 0
         for index, (chunk, vector) in enumerate(zip(chunks, vectors, strict=True)):
             points.append(
@@ -66,6 +79,7 @@ def index_documents(
             )
             size += payload_bytes(filename, index, chunk)
         stats[filename] = (len(chunks), size)
+    report("upserting", 0, 1)
     if points:
         gateway.upsert(collection, points)
     return stats

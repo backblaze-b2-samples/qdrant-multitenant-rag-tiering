@@ -17,6 +17,7 @@ _locks: dict[str, asyncio.Lock] = {}
 _last_query: dict[str, float] = {}
 _last_write: dict[str, float] = {}
 _transitional: dict[str, str] = {}
+_progress: dict[str, tuple[int, int]] = {}  # (done, total) within the current stage
 _started_at: float = time.time()
 
 
@@ -26,6 +27,7 @@ def reset(started_at: float | None = None) -> None:
     _last_query.clear()
     _last_write.clear()
     _transitional.clear()
+    _progress.clear()
     _started_at = time.time() if started_at is None else started_at
 
 
@@ -60,6 +62,7 @@ def last_query_at(tenant_id: str) -> datetime | None:
 
 
 def set_transitional(tenant_id: str, value: str | None) -> None:
+    _progress.pop(tenant_id, None)  # a count belongs to one stage
     if value is None:
         _transitional.pop(tenant_id, None)
     else:
@@ -70,6 +73,14 @@ def transitional(tenant_id: str) -> str | None:
     return _transitional.get(tenant_id)
 
 
+def set_progress(tenant_id: str, done: int, total: int) -> None:
+    _progress[tenant_id] = (done, total)
+
+
+def progress(tenant_id: str) -> tuple[int, int] | None:
+    return _progress.get(tenant_id)
+
+
 def forget(tenant_id: str) -> None:
-    for table in (_last_query, _last_write, _transitional):
+    for table in (_last_query, _last_write, _transitional, _progress):
         table.pop(tenant_id, None)

@@ -28,8 +28,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCreateTenant } from "@/lib/queries";
+import { Progress } from "@/components/ui/progress";
+import { useCreateTenant, useTenantProgress } from "@/lib/queries";
 import { tenantFormSchema, type TenantFormValues } from "@/lib/tenant-form";
+import { createProgress } from "@/lib/tenant-state";
 import { ACCEPTED_EXTENSIONS, documentProblems, readDocuments } from "@/lib/text-documents";
 
 export function NewTenantDialog() {
@@ -38,6 +40,14 @@ export function NewTenantDialog() {
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const create = useCreateTenant();
+  // Polled every half second while the create runs: stage, n of N, a bar.
+  const creatingId = create.isPending ? (create.variables?.tenant_id ?? "") : "";
+  const { data: progress } = useTenantProgress(creatingId, { enabled: !!creatingId });
+  const current = progress?.tenant_id === creatingId ? progress : undefined;
+  // Once the server reported a stage, an idle reply means indexing is done.
+  const [startedFor, setStartedFor] = useState<string | null>(null);
+  if (current?.state && startedFor !== creatingId) setStartedFor(creatingId);
+  const stage = creatingId ? createProgress(current, startedFor === creatingId) : null;
   const form = useForm<TenantFormValues>({
     resolver: zodResolver(tenantFormSchema),
     defaultValues: { tenant_id: "", display_name: "" },
@@ -134,6 +144,14 @@ export function NewTenantDialog() {
                 </p>
               )}
             </div>
+            {create.isPending && (
+              <div className="space-y-2" data-testid="create-progress">
+                <Progress value={stage?.percent ?? 100} aria-label="Create progress" />
+                <p className="text-sm text-muted-foreground" aria-live="polite" data-testid="create-stage">
+                  {stage?.text ?? "Indexed; loading the new tenant…"}
+                </p>
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel

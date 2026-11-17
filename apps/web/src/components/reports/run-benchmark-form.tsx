@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Gauge, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -17,20 +17,54 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StateBadge } from "@/components/tenants/state-badge";
-import { useRunBenchmark, useTenants } from "@/lib/queries";
+import { useBenchmarkProgress, useRunBenchmark, useTenants } from "@/lib/queries";
 import { QUERIES_PER_PHASE_OPTIONS } from "@/lib/tenant-form";
-import { defaultBenchmarkSelection } from "@/lib/tenant-state";
+import {
+  benchmarkChoices,
+  benchmarkProgressText,
+  checkedForBenchmark,
+  defaultBenchmarkSelection,
+  finishedRunId,
+} from "@/lib/tenant-state";
 
 const MAX_TENANTS = 6;
 
 export function RunBenchmarkForm() {
   const router = useRouter();
-  const { data: tenants = [] } = useTenants();
   const [picked, setPicked] = useState<string[] | null>(null);
   const [perPhase, setPerPhase] = useState("10");
   const run = useRunBenchmark();
-  const selected = picked ?? defaultBenchmarkSelection(tenants);
-  const eligible = tenants.filter((t) => t.state === "hot" || t.state === "parked");
+  // Server-side progress: also shows a run started before this page loaded.
+  const { data: progress } = useBenchmarkProgress({ busy: run.isPending });
+  const running = run.isPending || !!progress?.running;
+  const { data: tenants = [], isLoading: tenantsLoading } = useTenants({ busy: running });
+  const choices = benchmarkChoices(tenants);
+  const selectable = choices.filter((c) => c.selectable).map((c) => c.tenant.tenant_id);
+  const selected = (picked ?? defaultBenchmarkSelection(tenants)).filter((id) =>
+    selectable.includes(id)
+  );
+  const progressText = benchmarkProgressText(progress);
+  const checked = checkedForBenchmark(selected, progress);
+
+  // A run this tab only watched (e.g. after a reload) has no mutation
+  // callback: announce its end here and offer the report it wrote.
+  const previousProgress = useRef(progress);
+  useEffect(() => {
+    const runId = finishedRunId(previousProgress.current, progress);
+    previousProgress.current = progress;
+    if (runId === null || run.status !== "idle") return;
+    if (runId === "") {
+      toast.error("Benchmark ended without a report", {
+        description: "It failed on the server; see the API log for the reason.",
+      });
+      return;
+    }
+    toast.success("Benchmark finished", {
+      description: `rag/reports/${runId}/report.json`,
+      duration: 15_000,
+      action: { label: "Open report", onClick: () => router.push(`/reports/${runId}`) },
+    });
+  }, [progress, run.status, router]);
 
   const submit = () =>
     run.mutate(
@@ -58,14 +92,20 @@ export function RunBenchmarkForm() {
         </p>
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Tenants (up to {MAX_TENANTS})</legend>
-          {eligible.length === 0 && (
-            <p className="text-sm text-muted-foreground">No hot or parked tenants yet.</p>
+          {choices.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              {tenantsLoading ? "Loading tenants…" : "No hot or parked tenants yet."}
+            </p>
           )}
-          {eligible.map((t) => (
+          {choices.map(({ tenant: t, selectable: canPick }) => (
             <label key={t.tenant_id} className="flex items-center gap-2 text-sm">
               <Checkbox
-                checked={selected.includes(t.tenant_id)}
-                disabled={!selected.includes(t.tenant_id) && selected.length >= MAX_TENANTS}
+                checked={checked.includes(t.tenant_id)}
+                disabled={
+                  !canPick ||
+                  running ||
+                  (!selected.includes(t.tenant_id) && selected.length >= MAX_TENANTS)
+                }
                 onCheckedChange={(checked) =>
                   setPicked(
                     checked
@@ -95,15 +135,34 @@ export function RunBenchmarkForm() {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={submit} disabled={run.isPending || selected.length === 0}>
-            {run.isPending ? (
+          <Button
+            onClick={submit}
+            disabled={running || selected.length === 0}
+            aria-describedby={running ? "benchmark-progress" : undefined}
+          >
+            {running ? (
               <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
             ) : (
               <Gauge aria-hidden="true" className="h-4 w-4" />
             )}
-            {run.isPending ? "Benchmarking…" : "Run benchmark"}
+            {running ? "Benchmarking…" : "Run benchmark"}
           </Button>
         </div>
+        {running && (
+          <p
+            id="benchmark-progress"
+            className="text-sm text-muted-foreground"
+            aria-live="polite"
+            data-testid="benchmark-progress"
+          >
+            <span className="block">{progressText ?? "Starting the benchmark…"}</span>
+            {!run.isPending && (
+              <span className="block">
+                A benchmark is already running; Run benchmark unlocks when it finishes.
+              </span>
+            )}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

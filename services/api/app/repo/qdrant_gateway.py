@@ -22,6 +22,7 @@ from typing import BinaryIO
 import httpx
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
+from qdrant_client.http.exceptions import UnexpectedResponse
 
 from app.types.ports import ChunkPoint, CollectionStats, NodeSnapshot, ScoredPoint
 
@@ -116,9 +117,15 @@ class QdrantGateway:
     def collection_stats(self, name: str) -> CollectionStats | None:
         if not self.client.collection_exists(name):
             return None
-        info = self.client.get_collection(name)
+        try:
+            info = self.client.get_collection(name)
+            count = self.client.count(collection_name=name, exact=True).count
+        except UnexpectedResponse as e:
+            # Dropped between the check and the read (a park's last step).
+            if e.status_code == 404:
+                return None
+            raise
         vectors = info.config.params.vectors
-        count = self.client.count(collection_name=name, exact=True).count
         distance = vectors.distance
         return CollectionStats(
             points=int(count),

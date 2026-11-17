@@ -136,6 +136,16 @@
     "post /tenants/{tenant_id}/restore": {
       "route": "tenantRestore"
     },
+    "get /tenants/{tenant_id}/progress": {
+      "route": "tenantProgress",
+      "query": {
+        "name": "tenantProgress",
+        "segments": [
+          "tenants",
+          "progress"
+        ]
+      }
+    },
     "get /tenants/{tenant_id}/snapshots": {
       "route": "tenantSnapshots",
       "query": {
@@ -181,6 +191,16 @@
         "name": "reports",
         "segments": [
           "reports"
+        ]
+      }
+    },
+    "get /reports/progress": {
+      "route": "reportProgress",
+      "query": {
+        "name": "reportProgress",
+        "segments": [
+          "reports",
+          "progress"
         ]
       }
     },

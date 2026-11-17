@@ -8,7 +8,12 @@ from pydantic import BaseModel, Field
 from app.types.base import ResponseModel
 from app.types.tiering import SnapshotManifest
 
-TenantState = Literal["hot", "parked", "empty", "snapshotting", "verifying", "restoring"]
+TenantState = Literal[
+    "hot", "parked", "empty",
+    "writing", "embedding", "upserting",  # create stages
+    "snapshotting", "uploading", "verifying", "dropping",  # park stages
+    "restoring",
+]
 
 TENANT_ID_PATTERN = r"^[a-z0-9][a-z0-9-]{0,38}[a-z0-9]$"
 
@@ -114,3 +119,12 @@ class RestoreResult(ResponseModel):
     state: TenantState
     timing: RestoreTiming
     point_count: int
+
+
+class TenantProgress(ResponseModel):
+    """What is running on a tenant right now (in memory; no B2 read)."""
+
+    tenant_id: str
+    state: TenantState | None = Field(description="The stage in flight; null when idle.")
+    done: int | None = Field(description="Units done in this stage (documents or chunks).")
+    total: int | None

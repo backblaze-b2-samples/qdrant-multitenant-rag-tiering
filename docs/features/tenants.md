@@ -33,7 +33,17 @@ Qdrant collection `tenant_<tenant>` while it is hot.
 - Qdrant: collection `tenant_<tenant>` (cosine, vector size read from the model)
 - `TenantSummary` / `TenantDetail`; state is derived, never stored:
   `hot` (collection exists), `parked` (no collection, `latest.json` in B2),
-  `empty` (metadata only), plus in-memory `snapshotting` / `verifying` / `restoring`
+  `empty` (metadata only), plus in-memory `writing` / `embedding` / `upserting` (the create stages, also set by an
+  edit that re-indexes), `snapshotting` / `uploading` / `verifying` / `dropping` (the park
+  stages) and `restoring`. `GET /tenants/<id>/progress` -> `TenantProgress {tenant_id, state, done, total}` reads only
+  memory (no B2), so it answers before the tenant's metadata exists; the New tenant dialog polls
+  it every 500 ms and shows "Step n of 3" with "document n of N" while writing, "n of N
+  chunks" while embedding (in batches of 16), and a determinate bar
+- The list and detail derive each tenant's state and points from one per-tenant read (stage
+  first, then the node), never from a list-wide collection snapshot, so a create or park that
+  finishes mid-listing is not shown as "Empty, 0 points"
+- Seed: every Seed control shows a running seed (shared mutation key), and the result toast
+  fires even if the clicked control unmounted (the table's empty-state button does)
 
 ## Flow
 - Create: validate, write documents to B2, write `_tenant.json`, embed and upsert, rewrite

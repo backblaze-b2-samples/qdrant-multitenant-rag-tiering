@@ -19,29 +19,36 @@ from app.service import deps, state
 from app.service.errors import Conflict, InvalidInput, NotFound
 from app.service.ingest import index_documents
 from app.service.restore import restore_locked
+from app.service.tenant_reads import (
+    derive_state,
+    detail_sync,
+    get_progress,
+    list_tenant_ids,
+    list_tenants_sync,
+    parked_ids,
+    payload_total,
+    read_manifest,
+    read_meta,
+)
 from app.service.validation import validate_filename, validate_tenant_id
 from app.types.tenants import (
     DeleteTenantResult,
     DocumentIn,
-    DocumentInfo,
     TenantCreate,
     TenantDetail,
-    TenantSummary,
     TenantUpdate,
 )
-from app.types.tiering import SnapshotManifest
 
-__all__ = ["validate_filename", "validate_tenant_id"]
+# The read side lives in `tenant_reads`; re-exported so callers keep one module.
+__all__ = [
+    "derive_state", "detail_sync", "get_progress", "list_tenant_ids", "list_tenants_sync", "parked_ids",
+    "payload_total", "read_meta", "validate_filename", "validate_tenant_id",
+]
 
 TEXT_TYPES = {"md": "text/markdown; charset=utf-8", "txt": "text/plain; charset=utf-8"}
 
 
 # --- metadata ---------------------------------------------------------------
-
-
-def read_meta(tenant_id: str) -> dict | None:
-    raw = deps.store().get_bytes(deps.tenant_meta_key(tenant_id))
-    return None if raw is None else json.loads(raw)
 
 
 def write_meta(meta: dict) -> None:
@@ -50,99 +57,6 @@ def write_meta(meta: dict) -> None:
         deps.tenant_meta_key(meta["tenant_id"]),
         json.dumps(meta, indent=2).encode(),
         "application/json",
-    )
-
-
-def payload_total(meta: dict | None) -> int:
-    return sum(d.get("payload_bytes", 0) for d in (meta or {}).get("documents", []))
-
-
-def list_tenant_ids() -> list[str]:
-    root = deps.corpus_root()
-    ids = []
-    for entry in deps.store().list_objects(root):
-        parts = entry.key[len(root) :].split("/")
-        if len(parts) == 2 and parts[1] == deps.TENANT_META:
-            ids.append(parts[0])
-    return sorted(ids)
-
-
-def parked_ids() -> set[str]:
-    """Tenants that have a manifest in B2 (one listing, not one GET per tenant)."""
-    root = deps.snapshots_root()
-    return {
-        e.key[len(root) :].split("/")[0]
-        for e in deps.store().list_objects(root)
-        if e.key.endswith("/" + deps.MANIFEST)
-    }
-
-
-def derive_state(tenant_id: str, collections: set[str], has_manifest: bool) -> str:
-    transitional = state.transitional(tenant_id)
-    if transitional:
-        return transitional
-    if deps.collection_name(tenant_id) in collections:
-        return "hot"
-    return "parked" if has_manifest else "empty"
-
-
-def _summary_fields(tenant_id: str, meta: dict, collections: set[str], manifest) -> dict:
-    current = derive_state(tenant_id, collections, manifest is not None)
-    points, vector_size = 0, 0
-    stats = None
-    if deps.collection_name(tenant_id) in collections:
-        stats = deps.gateway().collection_stats(deps.collection_name(tenant_id))
-    if stats is not None:
-        points, vector_size = stats.points, stats.vector_size
-    elif manifest is not None:
-        points, vector_size = manifest.point_count, manifest.vector_size
-    return {
-        "tenant_id": tenant_id,
-        "display_name": meta.get("display_name", tenant_id),
-        "state": current,
-        "point_count": points,
-        "document_count": len(meta.get("documents", [])),
-        "vector_bytes_estimate": points * vector_size * 4 + payload_total(meta) if points else 0,
-        "last_query_at": state.last_query_at(tenant_id),
-        "snapshot_size_bytes": manifest.size_bytes if manifest else None,
-        "snapshot_created_at": manifest.created_at if manifest else None,
-    }
-
-
-def _manifest(tenant_id: str) -> SnapshotManifest | None:
-    return snapshot_store.get_manifest(deps.store(), deps.manifest_key(tenant_id))
-
-
-def list_tenants_sync() -> list[TenantSummary]:
-    collections = set(deps.gateway().list_collections())
-    with_manifest = parked_ids()
-    summaries = []
-    for tenant_id in list_tenant_ids():
-        meta = read_meta(tenant_id)
-        if meta is None:
-            continue
-        manifest = _manifest(tenant_id) if tenant_id in with_manifest else None
-        summaries.append(TenantSummary(**_summary_fields(tenant_id, meta, collections, manifest)))
-    return summaries
-
-
-def detail_sync(tenant_id: str) -> TenantDetail:
-    meta = read_meta(tenant_id)
-    if meta is None:
-        raise NotFound(f"Tenant {tenant_id} not found.")
-    manifest = _manifest(tenant_id)
-    collections = set(deps.gateway().list_collections())
-    return TenantDetail(
-        **_summary_fields(tenant_id, meta, collections, manifest),
-        created_at=meta["created_at"],
-        documents=[
-            DocumentInfo(
-                filename=d["filename"], key=d["key"], size_bytes=d["size_bytes"], chunks=d["chunks"]
-            )
-            for d in meta.get("documents", [])
-        ],
-        manifest=manifest,
-        snapshot_stale=bool(meta.get("snapshot_stale")) and manifest is not None,
     )
 
 
@@ -164,7 +78,8 @@ def _check_documents(documents: list[DocumentIn]) -> None:
 
 def _store_documents(tenant_id: str, documents: list[DocumentIn]) -> dict[str, dict]:
     stored = {}
-    for doc in documents:
+    for done, doc in enumerate(documents):
+        state.set_progress(tenant_id, done, len(documents))
         data = doc.text.encode("utf-8")
         key = deps.doc_key(tenant_id, doc.filename)
         deps.store().put_bytes(key, data, TEXT_TYPES[doc.filename.rsplit(".", 1)[1]])
@@ -174,9 +89,16 @@ def _store_documents(tenant_id: str, documents: list[DocumentIn]) -> dict[str, d
     return stored
 
 
+def _report(tenant_id: str, stage: str, done: int, total: int) -> None:
+    if state.transitional(tenant_id) != stage:
+        state.set_transitional(tenant_id, stage)
+    state.set_progress(tenant_id, done, total)
+
+
 def _index(tenant_id: str, entries: dict[str, dict], texts: list[tuple[str, str]]) -> None:
     stats = index_documents(
-        deps.gateway(), deps.embedder(), tenant_id, deps.collection_name(tenant_id), texts
+        deps.gateway(), deps.embedder(), tenant_id, deps.collection_name(tenant_id), texts,
+        on_progress=lambda stage, done, total: _report(tenant_id, stage, done, total),
     )
     for filename, (chunks, payload) in stats.items():
         entries[filename].update(chunks=chunks, payload_bytes=payload)
@@ -186,18 +108,23 @@ def _create_sync(request: TenantCreate) -> TenantDetail:
     tenant_id = request.tenant_id
     if read_meta(tenant_id) is not None:
         raise Conflict(f"Tenant {tenant_id} already exists.")
-    entries = _store_documents(tenant_id, request.documents)
-    meta = {
-        "tenant_id": tenant_id,
-        "display_name": request.display_name,
-        "created_at": datetime.now(UTC).isoformat(),
-        "documents": list(entries.values()),
-        "snapshot_stale": False,
-    }
-    # Metadata first: if indexing fails the tenant still exists, as "empty".
-    write_meta(meta)
-    _index(tenant_id, entries, [(d.filename, d.text) for d in request.documents])
-    write_meta(meta)
+    # Stages (writing, embedding, upserting) are polled by the create dialog.
+    state.set_transitional(tenant_id, "writing")
+    try:
+        entries = _store_documents(tenant_id, request.documents)
+        meta = {
+            "tenant_id": tenant_id,
+            "display_name": request.display_name,
+            "created_at": datetime.now(UTC).isoformat(),
+            "documents": list(entries.values()),
+            "snapshot_stale": False,
+        }
+        # Metadata first: if indexing fails the tenant still exists, as "empty".
+        write_meta(meta)
+        _index(tenant_id, entries, [(d.filename, d.text) for d in request.documents])
+        write_meta(meta)
+    finally:
+        state.set_transitional(tenant_id, None)
     state.touch(tenant_id)
     return detail_sync(tenant_id)
 
@@ -223,7 +150,7 @@ def _update_sync(tenant_id: str, request: TenantUpdate) -> TenantDetail:
         raise InvalidInput("A tenant needs at least one document.")
     collection = deps.collection_name(tenant_id)
     gateway, store = deps.gateway(), deps.store()
-    has_manifest = _manifest(tenant_id) is not None
+    has_manifest = read_manifest(tenant_id) is not None
     changes = bool(request.add_documents or request.remove_documents)
     hot = collection in gateway.list_collections()
     if changes and not hot and has_manifest:
@@ -242,7 +169,10 @@ def _update_sync(tenant_id: str, request: TenantUpdate) -> TenantDetail:
     entries.update(_store_documents(tenant_id, request.add_documents))
     texts += [(d.filename, d.text) for d in request.add_documents]
     if texts:
-        _index(tenant_id, entries, texts)
+        try:
+            _index(tenant_id, entries, texts)
+        finally:
+            state.set_transitional(tenant_id, None)
     if request.display_name:
         meta["display_name"] = request.display_name
     meta["documents"] = list(entries.values())

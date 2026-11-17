@@ -13,7 +13,7 @@ at a glance.
 - `apps/web/src/components/dashboard/stats-cards.tsx` — hot / parked / empty counts,
   vector memory in use and freed (estimates), snapshot and corpus bytes in B2
 - `apps/web/src/components/dashboard/tenant-memory-chart.tsx` — per-tenant vector
-  footprint; hot bars solid, parked bars faded
+  footprint; hot bars solid, parked bars faded; every bar is labelled (angled ids, long ones shortened)
 - `apps/web/src/components/reports/reports-list.tsx` — the five latest latency reports
 - `services/api/app/service/tiering.py` — `get_stats()`
 

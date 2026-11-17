@@ -128,3 +128,113 @@ async def test_seed_creates_distinct_tenants_and_skips_existing(client):
 
     assert len(first["created"]) == 2 and first["skipped"] == []
     assert second["created"] == [] and sorted(second["skipped"]) == sorted(first["created"])
+
+
+@pytest.mark.asyncio
+async def test_tenant_list_reads_tenants_concurrently(client, rag, monkeypatch):
+    """GET /tenants did one B2 round trip after another per tenant (5 s for 8
+    tenants), so a refetch after seed or a sweep landed seconds late. Per-tenant
+    reads must overlap: total time ~ one tenant's reads, not the sum."""
+    import time
+
+    for tenant_id in ("t-one", "t-two", "t-three", "t-four"):
+        await create_tenant(client, tenant_id)
+    for tenant_id in ("t-one", "t-two"):
+        await park_tenant(tenant_id)
+
+    original = rag.store.get_bytes
+
+    def slow_get(key):
+        time.sleep(0.2)  # one B2 round trip
+        return original(key)
+
+    monkeypatch.setattr(rag.store, "get_bytes", slow_get)
+
+    started = time.perf_counter()
+    response = await client.get("/tenants")
+    elapsed = time.perf_counter() - started
+
+    assert response.status_code == 200
+    assert [t["tenant_id"] for t in response.json()] == ["t-four", "t-one", "t-three", "t-two"]
+    # 6 sequential GETs (4 metas + 2 manifests) would take >= 1.2 s.
+    assert elapsed < 0.8, elapsed
+
+
+@pytest.mark.asyncio
+async def test_create_reports_each_stage_in_order(client, rag, monkeypatch):
+    """Like a park, a create sets its stage so the dialog can show progress."""
+    from app.service import state
+
+    seen: list[str | None] = []
+    original = state.set_transitional
+
+    def record(tenant_id, value):
+        seen.append(value)
+        original(tenant_id, value)
+
+    monkeypatch.setattr(state, "set_transitional", record)
+
+    detail = await create_tenant(client, "acme-legal")
+
+    assert seen == ["writing", "embedding", "upserting", None]
+    assert detail["state"] == "hot"
+
+
+@pytest.mark.asyncio
+async def test_failed_create_does_not_leave_a_stage_behind(client, rag, monkeypatch):
+    from app.service import state
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("embedder down")
+
+    monkeypatch.setattr(rag.embedder, "embed", boom)
+    response = await client.post(
+        "/tenants",
+        json={"tenant_id": "acme-legal", "display_name": "Acme", "documents": LEGAL_DOCS},
+    )
+
+    assert response.status_code >= 500
+    assert state.transitional("acme-legal") is None
+
+
+@pytest.mark.asyncio
+async def test_edit_that_reindexes_ends_hot_not_mid_stage(client, rag):
+    await create_tenant(client, "acme-legal")
+
+    response = await client.patch(
+        "/tenants/acme-legal",
+        json={"add_documents": [{"filename": "extra.md", "text": "Extra clause text here."}]},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["state"] == "hot"
+
+
+@pytest.mark.asyncio
+async def test_list_does_not_call_a_just_created_tenant_empty(client, rag, monkeypatch):
+    """GET /tenants used to snapshot the collection names first and read each
+    tenant later; a create that finished in between read as "Empty, 0 points".
+    State and points must come from the same, per-tenant read."""
+    await create_tenant(client, "acme-legal")
+    # The collection snapshot predates the create finishing.
+    monkeypatch.setattr(rag.gateway, "list_collections", lambda: [])
+
+    row = (await client.get("/tenants")).json()[0]
+
+    assert row["state"] == "hot"
+    assert row["point_count"] > 0
+
+
+@pytest.mark.asyncio
+async def test_list_sees_a_park_that_finished_mid_listing(client, rag, monkeypatch):
+    """Same race for a first park: the manifest listing predates it."""
+    from app.service import tenant_reads
+
+    await create_tenant(client, "acme-legal")
+    await park_tenant("acme-legal")
+    monkeypatch.setattr(tenant_reads, "parked_ids", lambda: set())
+
+    row = (await client.get("/tenants")).json()[0]
+
+    assert row["state"] == "parked"
+    assert row["point_count"] > 0

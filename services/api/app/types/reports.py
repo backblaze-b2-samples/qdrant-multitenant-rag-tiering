@@ -55,3 +55,18 @@ class ReportSummary(ResponseModel):
     run_id: str
     created_at: datetime
     tenant_count: int
+
+
+class BenchmarkProgress(ResponseModel):
+    """The benchmark in flight on this API process, if any (in-memory)."""
+
+    running: bool
+    phase: Literal["warm", "park", "restore", "post_restore"] | None = None
+    tenant_id: str | None = None
+    tenants_done: int = 0
+    tenants_total: int = 0
+    tenant_ids: list[str] = Field(default_factory=list, description="The run's tenants, in order.")
+    started_at: datetime | None = None
+    last_run_id: str | None = Field(
+        default=None, description="Report of the most recent run that finished on this process."
+    )

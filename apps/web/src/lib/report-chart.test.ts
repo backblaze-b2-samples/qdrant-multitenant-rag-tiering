@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { LatencyReport, TenantLatency } from "@qdrant-multitenant-rag-tiering/shared";
 
-import { allResultsMatch, latencyRows, memoryRows, restorePenalty } from "./report-chart";
+import {
+  allResultsMatch,
+  latencyRows,
+  memoryFreedCells,
+  memoryRows,
+  restorePenalty,
+} from "./report-chart";
 
 function stats(p50: number) {
   return { n: 10, p50_ms: p50, p95_ms: p50 * 2, mean_ms: p50 };
@@ -63,5 +69,28 @@ describe("report chart shaping", () => {
 
   it("flags any tenant whose results changed", () => {
     expect(allResultsMatch(report([entry("a"), entry("b", { results_match: false })]))).toBe(false);
+  });
+});
+
+describe("memoryFreedCells", () => {
+  it("gives readable estimate and observed RSS figures for the Figures table", () => {
+    expect(
+      memoryFreedCells(
+        entry("a", {
+          memory_freed: { vector_bytes_estimate: 377_446, node_rss_delta_bytes: 2 * 1024 * 1024 },
+        })
+      )
+    ).toEqual({ estimate: "368.6 KB", observed: "2.0 MB" });
+  });
+
+  it("shows an observed drop of 0 B (not a blank) when RSS did not fall", () => {
+    expect(memoryFreedCells(entry("a")).observed).toBe("0 B");
+  });
+
+  it("says the metric was unavailable when RSS is null", () => {
+    const cells = memoryFreedCells(
+      entry("a", { memory_freed: { vector_bytes_estimate: 0, node_rss_delta_bytes: null } })
+    );
+    expect(cells.observed).toBe("n/a");
   });
 });

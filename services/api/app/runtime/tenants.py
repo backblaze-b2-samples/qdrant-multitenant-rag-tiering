@@ -14,6 +14,7 @@ from app.types.tenants import (
     SeedResult,
     TenantCreate,
     TenantDetail,
+    TenantProgress,
     TenantSummary,
     TenantUpdate,
 )
@@ -93,6 +94,13 @@ async def restore_tenant_endpoint(tenant_id: str):
     if result.timing.total_ms > 0:
         metrics.record_restore()
     return result
+
+
+@router.get("/tenants/{tenant_id}/progress", response_model=TenantProgress)
+def tenant_progress_endpoint(tenant_id: str):
+    """The stage in flight and its count (in memory): polled while a create runs."""
+    with http_errors():
+        return tenants.get_progress(tenant_id)
 
 
 @router.get("/tenants/{tenant_id}/snapshots", response_model=list[SnapshotEntry])

@@ -47,6 +47,8 @@ def get_s3_client():
         aws_secret_access_key=settings.b2_application_key,
         config=Config(
             connect_timeout=5,
+            # Room for the overlapping list reads (tenants, reports, stats).
+            max_pool_connections=32,
             read_timeout=30,
             retries={"mode": "standard", "total_max_attempts": 3},
             signature_version="s3v4",

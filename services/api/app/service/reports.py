@@ -12,14 +12,17 @@ import math
 import re
 import secrets
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
 from app.service import deps, tenants
 from app.service.errors import Conflict, NotFound, StorageFailure
 from app.service.restore import query_tenant
+from app.service.tenant_reads import LIST_READ_WORKERS
 from app.service.tiering import park_tenant
 from app.service.validation import validate_run_id, validate_tenant_id
 from app.types.reports import (
+    BenchmarkProgress,
     BenchmarkRequest,
     LatencyReport,
     LatencyStats,
@@ -31,6 +34,19 @@ from app.types.tenants import QueryHit, QueryRequest
 
 SCORE_TOLERANCE = 1e-4
 TOP_K = 5
+
+# The benchmark in flight, so a reloaded Reports page can show it. In-memory:
+# it is lost on restart, like the run it describes.
+_progress = BenchmarkProgress(running=False)
+
+
+def get_progress() -> BenchmarkProgress:
+    return _progress
+
+
+def _set_progress(**changes) -> None:
+    global _progress
+    _progress = _progress.model_copy(update=changes)
 
 
 def latency_stats(samples: list[float]) -> LatencyStats:
@@ -90,22 +106,26 @@ async def _run_phase(tenant_id: str, probes: list[str]) -> tuple[list[list[Query
 
 
 async def _bench_tenant(tenant_id: str, count: int) -> TenantLatency:
+    _set_progress(phase="warm", tenant_id=tenant_id)  # probe reads count as warm-up
     probes = await asyncio.to_thread(probe_queries, tenant_id, count)
     # Warm-up: makes the tenant hot (restoring it if it was parked) and pays the
     # first-call cost of the embedder, so the warm phase measures steady state.
     await query_tenant(tenant_id, QueryRequest(query=probes[0], top_k=TOP_K))
     warm_hits, warm_ms = await _run_phase(tenant_id, probes)
 
+    _set_progress(phase="park")
     parked = await park_tenant(tenant_id)
     if not parked.verified or parked.manifest is None:
         raise Conflict(f"Could not park {tenant_id}: {parked.reason}")
 
+    _set_progress(phase="restore")
     started = time.perf_counter()
     first = await query_tenant(tenant_id, QueryRequest(query=probes[0], top_k=TOP_K))
     first_ms = round((time.perf_counter() - started) * 1000, 3)
     if first.restore is None:
         raise StorageFailure(f"{tenant_id} answered without restoring after park")
 
+    _set_progress(phase="post_restore")
     post_hits, post_ms = await _run_phase(tenant_id, probes)
     return TenantLatency(
         tenant_id=tenant_id,
@@ -142,35 +162,49 @@ async def run_benchmark(request: BenchmarkRequest) -> LatencyReport:
         validate_tenant_id(tenant_id)
         if await asyncio.to_thread(tenants.read_meta, tenant_id) is None:
             raise NotFound(f"Tenant {tenant_id} not found.")
-    results = [await _bench_tenant(t, request.queries_per_phase) for t in tenant_ids]
-    report = LatencyReport(
-        run_id=_new_run_id(),
-        created_at=datetime.now(UTC),
-        qdrant_version=await asyncio.to_thread(deps.gateway().version),
-        embedding_model=deps.embedder().model_name,
-        tenants=results,
+    _set_progress(
+        running=True, phase=None, tenant_id=None, tenants_done=0, tenant_ids=tenant_ids,
+        tenants_total=len(tenant_ids), started_at=datetime.now(UTC), last_run_id=None,
     )
-    await asyncio.to_thread(write_report, report)
+    try:
+        results: list[TenantLatency] = []
+        for tenant_id in tenant_ids:
+            results.append(await _bench_tenant(tenant_id, request.queries_per_phase))
+            _set_progress(tenants_done=len(results))
+        report = LatencyReport(
+            run_id=_new_run_id(),
+            created_at=datetime.now(UTC),
+            qdrant_version=await asyncio.to_thread(deps.gateway().version),
+            embedding_model=deps.embedder().model_name,
+            tenants=results,
+        )
+        await asyncio.to_thread(write_report, report)
+        _set_progress(last_run_id=report.run_id)
+    finally:
+        _set_progress(running=False, phase=None, tenant_id=None)
     return report
 
 
+def _summary(key: str) -> ReportSummary | None:
+    raw = deps.store().get_bytes(key)
+    if raw is None:
+        return None
+    body = json.loads(raw)
+    return ReportSummary(
+        run_id=body["run_id"],
+        created_at=body["created_at"],
+        tenant_count=len(body.get("tenants", [])),
+    )
+
+
 def list_reports() -> list[ReportSummary]:
-    store = deps.store()
-    summaries = []
-    for entry in store.list_objects(deps.reports_root()):
-        if not entry.key.endswith("/report.json"):
-            continue
-        raw = store.get_bytes(entry.key)
-        if raw is None:
-            continue
-        body = json.loads(raw)
-        summaries.append(
-            ReportSummary(
-                run_id=body["run_id"],
-                created_at=body["created_at"],
-                tenant_count=len(body.get("tenants", [])),
-            )
-        )
+    """Every report, newest first; the report.json reads overlap (one B2 GET each)."""
+    keys = [
+        e.key for e in deps.store().list_objects(deps.reports_root())
+        if e.key.endswith("/report.json")
+    ]
+    with ThreadPoolExecutor(max_workers=LIST_READ_WORKERS) as pool:
+        summaries = [s for s in pool.map(_summary, keys) if s is not None]
     return sorted(summaries, key=lambda s: s.created_at, reverse=True)
 
 

@@ -57,3 +57,20 @@ Known tech debt items. Agents update this when they discover or create tech debt
 | Custom `FileNotFoundError` shadowed the built-in | Renamed to `FileNotFoundServiceError` |
 | Dropzone accepted any file type client-side | `accept` allow-list mirroring backend `ALLOWED_TYPES` (tested for drift) |
 | No test harness for feature specs | pytest suite across upload, files, activity, errors, validation, rate limit, pagination |
+
+## 2026-11-17 — verify
+- friction (unresolved after 3 rounds): Reports, benchmark form — only the hot tenant is pre-checked and "Tenants measured 1" results, with no text saying which tenants run → first-time user expects every listed tenant to be benchmarked (.local/verify/A-r3/r3-19-reports.png)
+- friction (unresolved after 3 rounds): Tiering sweep dialog — 15 s park shows "Parked n of N so far" plus per-tenant step text but no determinate progress bar → long wait without a bar (.local/verify/B-r3/r3-15-sweep-progress-later.png)
+- friction (unresolved after 3 rounds): Reports, Run benchmark — 37 s run shows "Tenant n of N (id): phase" plus spinner but no determinate progress bar → long wait without a bar (.local/verify/B-r3/r3-22-benchmark-progress-later.png)
+- friction (unresolved after 3 rounds): /files bucket explorer — lists "the 100 most recent of 1,314 objects" with other apps' folders first; this app's rag/ objects sit below the fold unless "App objects only" is used → B2 evidence hard to find on a shared bucket (.local/verify/C-r3/r3-09-files-snapshot-tree.png)
+- Report detail — every "RSS drop (obs.)" cell is 0 B and the observed series paints no bars → measured memory freed reads as nothing; only the estimate carries signal (.local/verify/C-r3/r3-20-bench-multi-figures.png)
+- Dashboard footprint chart — parked tenant tooltip reads "Vector memory (KiB, est.) 5.2" while the Tenants table reads "0 B (5.2 KB freed)" → same number labelled in-use vs freed (.local/verify/C-r3/r3-22-dashboard-after-benchmark.png)
+- Dashboard footprint chart — x-axis shows truncated tenant ids ("zoxide-docs-r33…") while the table uses display names → names disagree across surfaces (.local/verify/C-r3/r3-22-dashboard-after-benchmark.png)
+- Tenant detail — breadcrumb shows the title-cased id ("Bat Docs R8634") instead of the display name ("bat documentation") (.local/verify/C-r2/r2-04-created-tenant-hot.png)
+- Tenant detail during restore — header badge stays "Parked in B2" with no step text during a ~6 s restore; only the button reads "Restoring from B2…" (.local/verify/B-r3/r3-10-restoring.png)
+- Tenants page — the unlabeled "4 tenants" seed-count picker reads like a tenant count; the header and the empty state carry duplicate Seed controls (.local/verify/A-r3/r3-02-tenants-empty.png)
+- Toasts — "Parked 2 tenant(s)" / "Seeded 0 tenant(s)" use "(s)" plurals (.local/verify/B-r3/r3-17-table-after-sweep.png)
+- Tiering sweep dialog — default 7-day threshold with Dry run on returns "Candidates: none" with no hint that the 30 s option demos parking; the dialog has no "done" state after parking (.local/verify/A-r2/r2-09-sweep-default-result.png)
+- Dashboard empty state — the Seed action is one page deeper than the dashboard CTA ("Manage tenants") (.local/verify/A-r2/r2-01-dashboard-empty.png)
+- Report latency chart — linear scale makes warm/post-restore bars (~5 ms) flat next to restore bars (~0.5–2 s); the numbers are only readable in the Figures table (.local/verify/C-r2/r2-20-bench-multi-figures.png)
+- Memory units — MiB on the report chart, KB/MB in the tables and cards, and no unit on the dashboard footprint y-axis (.local/verify/C-r2/r2-17-dashboard-after-sweep.png)

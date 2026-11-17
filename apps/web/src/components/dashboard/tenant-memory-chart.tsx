@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTenants } from "@/lib/queries";
+import { truncateLabel } from "@/lib/utils";
 
 const chartConfig = {
   kib: { label: "Vector memory (KiB, est.)", color: "var(--chart-1)" },
@@ -61,10 +62,22 @@ export function TenantMemoryChart() {
             }
           />
         ) : (
-          <ChartContainer config={chartConfig} className="h-[240px] w-full">
+          <ChartContainer config={chartConfig} className="h-[280px] w-full">
             <BarChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="tenant" tickLine={false} axisLine={false} fontSize={11} />
+              {/* interval 0: label every bar (recharts otherwise skips ticks
+                  that would collide); angled and shortened so they fit. */}
+              <XAxis
+                dataKey="tenant"
+                tickLine={false}
+                axisLine={false}
+                fontSize={11}
+                interval={0}
+                angle={-35}
+                textAnchor="end"
+                height={70}
+                tickFormatter={(id: string) => truncateLabel(id, 16)}
+              />
               <YAxis tickLine={false} axisLine={false} fontSize={11} width={40} />
               <ChartTooltip content={<ChartTooltipContent />} />
               <Bar dataKey="kib" radius={[4, 4, 0, 0]}>

@@ -1,6 +1,97 @@
 {
   "components": {
     "schemas": {
+      "BenchmarkProgress": {
+        "description": "The benchmark in flight on this API process, if any (in-memory).",
+        "properties": {
+          "last_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Report of the most recent run that finished on this process.",
+            "title": "Last Run Id"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "enum": [
+                  "warm",
+                  "park",
+                  "restore",
+                  "post_restore"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          },
+          "tenant_ids": {
+            "description": "The run's tenants, in order.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Tenant Ids",
+            "type": "array"
+          },
+          "tenants_done": {
+            "default": 0,
+            "title": "Tenants Done",
+            "type": "integer"
+          },
+          "tenants_total": {
+            "default": 0,
+            "title": "Tenants Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "running",
+          "phase",
+          "tenant_id",
+          "tenants_done",
+          "tenants_total",
+          "tenant_ids",
+          "started_at",
+          "last_run_id"
+        ],
+        "title": "BenchmarkProgress",
+        "type": "object"
+      },
       "BenchmarkRequest": {
         "properties": {
           "queries_per_phase": {
@@ -728,8 +819,13 @@
               "hot",
               "parked",
               "empty",
+              "writing",
+              "embedding",
+              "upserting",
               "snapshotting",
+              "uploading",
               "verifying",
+              "dropping",
               "restoring"
             ],
             "title": "State",
@@ -1058,8 +1154,13 @@
               "hot",
               "parked",
               "empty",
+              "writing",
+              "embedding",
+              "upserting",
               "snapshotting",
+              "uploading",
               "verifying",
+              "dropping",
               "restoring"
             ],
             "title": "State",
@@ -1148,6 +1249,71 @@
         "title": "TenantLatency",
         "type": "object"
       },
+      "TenantProgress": {
+        "description": "What is running on a tenant right now (in memory; no B2 read).",
+        "properties": {
+          "done": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Units done in this stage (documents or chunks).",
+            "title": "Done"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hot",
+                  "parked",
+                  "empty",
+                  "writing",
+                  "embedding",
+                  "upserting",
+                  "snapshotting",
+                  "uploading",
+                  "verifying",
+                  "dropping",
+                  "restoring"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The stage in flight; null when idle.",
+            "title": "State"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "state",
+          "done",
+          "total"
+        ],
+        "title": "TenantProgress",
+        "type": "object"
+      },
       "TenantSummary": {
         "description": "One row of the tenants table. State is derived, never stored.",
         "properties": {
@@ -1204,8 +1370,13 @@
               "hot",
               "parked",
               "empty",
+              "writing",
+              "embedding",
+              "upserting",
               "snapshotting",
+              "uploading",
               "verifying",
+              "dropping",
               "restoring"
             ],
             "title": "State",
@@ -2217,6 +2388,28 @@
         ]
       }
     },
+    "/reports/progress": {
+      "get": {
+        "description": "The benchmark running on this process (phase, tenant, n of N), if any.",
+        "operationId": "benchmark_progress_endpoint_reports_progress_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkProgress"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Benchmark Progress Endpoint",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
     "/reports/{run_id}": {
       "get": {
         "operationId": "get_report_endpoint_reports__run_id__get",
@@ -2588,6 +2781,49 @@
           }
         },
         "summary": "Park Tenant Endpoint",
+        "tags": [
+          "tenants"
+        ]
+      }
+    },
+    "/tenants/{tenant_id}/progress": {
+      "get": {
+        "description": "The stage in flight and its count (in memory): polled while a create runs.",
+        "operationId": "tenant_progress_endpoint_tenants__tenant_id__progress_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantProgress"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tenant Progress Endpoint",
         "tags": [
           "tenants"
         ]

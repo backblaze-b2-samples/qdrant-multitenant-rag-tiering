@@ -18,7 +18,7 @@ import {
 import { StateBadge } from "@/components/tenants/state-badge";
 import { SeedControl } from "@/components/tenants/seed-control";
 import { useTenants } from "@/lib/queries";
-import { formatAge } from "@/lib/tenant-state";
+import { formatAge, vectorMemoryText } from "@/lib/tenant-state";
 import { humanizeBytes } from "@/lib/utils";
 
 export function TenantsTable() {
@@ -53,7 +53,7 @@ export function TenantsTable() {
                 <TableHead>State</TableHead>
                 <TableHead className="text-right">Points</TableHead>
                 <TableHead className="text-right">Docs</TableHead>
-                <TableHead className="text-right">Vector memory</TableHead>
+                <TableHead className="text-right">Vector memory in Qdrant (est.)</TableHead>
                 <TableHead>Last query</TableHead>
                 <TableHead className="text-right">Snapshot in B2</TableHead>
               </TableRow>
@@ -76,7 +76,7 @@ export function TenantsTable() {
                   <TableCell className="text-right tabular-nums">{t.point_count}</TableCell>
                   <TableCell className="text-right tabular-nums">{t.document_count}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {t.state === "hot" ? humanizeBytes(t.vector_bytes_estimate) : "0 B"}
+                    {vectorMemoryText(t)}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{formatAge(t.last_query_at)}</TableCell>
                   <TableCell className="text-right tabular-nums">

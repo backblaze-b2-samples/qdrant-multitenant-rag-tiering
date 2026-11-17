@@ -82,6 +82,7 @@ def park_locked(tenant_id: str) -> ParkResult:
         node_snapshot = gateway.create_snapshot(collection)
         snapshot_id = _new_snapshot_id()
         new_key = deps.snapshot_key(tenant_id, snapshot_id)
+        state.set_transitional(tenant_id, "uploading")
         try:
             upload = snapshot_store.upload_stream(
                 store,
@@ -124,6 +125,7 @@ def park_locked(tenant_id: str) -> ParkResult:
         return ParkResult(
             tenant_id=tenant_id, state="hot", manifest=None, verified=False, reason=reason
         )
+    state.set_transitional(tenant_id, "dropping")
     with contextlib.suppress(Exception):
         gateway.delete_snapshot(collection, node_snapshot.name)
     gateway.delete_collection(collection)

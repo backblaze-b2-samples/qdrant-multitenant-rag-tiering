@@ -8,6 +8,20 @@
 // contract. To change what is here, change the FastAPI route or Pydantic
 // model and re-run `pnpm contract:export && pnpm gen:api`.
 
+/** The benchmark in flight on this API process, if any (in-memory). */
+export interface BenchmarkProgress {
+  /** Report of the most recent run that finished on this process. */
+  last_run_id: string | null;
+  phase: string | null;
+  running: boolean;
+  started_at: string | null;
+  tenant_id: string | null;
+  /** The run's tenants, in order. */
+  tenant_ids: string[];
+  tenants_done: number;
+  tenants_total: number;
+}
+
 export interface BenchmarkRequest {
   queries_per_phase?: number;
   tenant_ids: string[];
@@ -288,6 +302,16 @@ export interface TenantLatency {
   snapshot_upload_ms: number;
   tenant_id: string;
   warm: LatencyStats;
+}
+
+/** What is running on a tenant right now (in memory; no B2 read). */
+export interface TenantProgress {
+  /** Units done in this stage (documents or chunks). */
+  done: number | null;
+  /** The stage in flight; null when idle. */
+  state: string | null;
+  tenant_id: string;
+  total: number | null;
 }
 
 /** One row of the tenants table. State is derived, never stored. */
