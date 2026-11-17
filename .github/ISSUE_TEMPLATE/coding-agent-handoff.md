@@ -37,7 +37,7 @@ title: "[area] "
 ## UI notes
 
 <!-- Add screenshots, mockups, or "Not UI-facing". For UI changes, include the expected before/after or key states.
-     Redact credentials, `.env` contents, and API keys before attaching anything — screenshots are a leak surface
+     Redact credentials, `.env` contents, and API keys before attaching anything: screenshots are a leak surface
      (AGENTS.md section 12). -->
 
 ## Docs and tests

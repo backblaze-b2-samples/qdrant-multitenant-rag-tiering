@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 # Single source of truth: repo-root .env. Anchored to this file's path so it
 # resolves correctly regardless of where uvicorn is invoked from (local
 # `cd services/api && uvicorn`, Docker WORKDIR, etc.). A deployment that ships
-# only this service has no repo root above it — there the file simply does not
+# only this service has no repo root above it: there the file simply does not
 # exist and configuration comes from real environment variables, so anchor on
 # this service's root and let load_dotenv be the no-op it already is.
 _API_ROOT = Path(__file__).resolve().parent
@@ -47,12 +47,12 @@ from app.service.warmup import warm_embedder  # noqa: E402
 # Required B2 settings are declared with empty-string defaults so that
 # `Settings()` instantiation (and therefore `from main import app`) never
 # raises during test collection. We instead fail fast at server startup
-# with a human-readable message — uvicorn surfaces this as the first log
+# with a human-readable message: uvicorn surfaces this as the first log
 # line, so misconfiguration is obvious within seconds rather than turning
 # into mysterious 500s on the first request.
 #
 # Which settings are required, and which placeholder values count as unset, come
-# from app/config/b2_required_vars.json — the same file scripts/doctor.mjs
+# from app/config/b2_required_vars.json: the same file scripts/doctor.mjs
 # parses. Nothing to keep in sync here.
 
 
@@ -155,8 +155,8 @@ app = FastAPI(
 # --- Middleware ordering matters for CORS-on-errors ---
 # Starlette wraps middleware so the LAST one registered is the OUTERMOST. We
 # need CORSMiddleware to be outermost (closest to the client) so that EVERY
-# response — including the 500 produced by the timing middleware's catch-all
-# for an uncaught exception — flows back out through CORS and gets an
+# response (including the 500 produced by the timing middleware's catch-all
+# for an uncaught exception) flows back out through CORS and gets an
 # `Access-Control-Allow-Origin` header.
 #
 # If CORS were registered last-but-one (inner to timing), an uncaught-exception
@@ -170,10 +170,10 @@ app = FastAPI(
 app.add_middleware(BaseHTTPMiddleware, dispatch=ratelimit.rate_limit_middleware)
 
 # Request ID + timing middleware. Its except-clause is the catch-all
-# that turns uncaught exceptions into a typed 500 — see metrics.timing_middleware.
+# that turns uncaught exceptions into a typed 500: see metrics.timing_middleware.
 app.add_middleware(BaseHTTPMiddleware, dispatch=metrics.timing_middleware)
 
-# CORS (outermost) — wraps every response, including error responses.
+# CORS (outermost): wraps every response, including error responses.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

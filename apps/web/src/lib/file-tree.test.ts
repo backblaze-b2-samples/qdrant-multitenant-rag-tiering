@@ -98,7 +98,7 @@ describe("initialExpandedPaths", () => {
       file("a/b/c/d/deep.txt", "2026-02-02T00:00:00Z"),
     ]);
 
-    // a/ then a/b/ reveals shallow.txt — c/ and d/ stay collapsed.
+    // a/ then a/b/ reveals shallow.txt: c/ and d/ stay collapsed.
     expect(initialExpandedPaths(tree)).toEqual(new Set(["a/", "a/b/"]));
   });
 

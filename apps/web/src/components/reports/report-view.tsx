@@ -96,7 +96,7 @@ export function ReportView({ runId }: { runId: string }) {
           <div className="stat-value">{report.tenants.length}</div>
         </StatCard>
         <StatCard label="First query after park vs warm p50">
-          <div className="stat-value">{penalty === null ? "—" : `${penalty}×`}</div>
+          <div className="stat-value">{penalty === null ? "n/a" : `${penalty}×`}</div>
         </StatCard>
         <StatCard label="Results after restore">
           <Badge variant={matches ? "secondary" : "destructive"} data-testid="results-match">

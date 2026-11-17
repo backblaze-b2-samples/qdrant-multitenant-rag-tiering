@@ -80,7 +80,7 @@ export function TenantsTable() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">{formatAge(t.last_query_at)}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {t.snapshot_size_bytes === null ? "—" : humanizeBytes(t.snapshot_size_bytes)}
+                    {t.snapshot_size_bytes === null ? "n/a" : humanizeBytes(t.snapshot_size_bytes)}
                   </TableCell>
                 </TableRow>
               ))}

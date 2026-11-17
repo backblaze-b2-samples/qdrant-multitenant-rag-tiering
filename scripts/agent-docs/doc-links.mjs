@@ -7,7 +7,7 @@
  * silently: GitHub serves the file and lands the reader at the top, so a link
  * to a section that no longer exists reads as working.
  *
- * External links (`http`, `mailto`) are never fetched — this check stays
+ * External links (`http`, `mailto`) are never fetched: this check stays
  * offline and deterministic. Non-Markdown targets are checked for existence
  * only, since anchors into them are not headings.
  */
@@ -148,7 +148,7 @@ export function checkDocLinks(repoRoot) {
 
       for (const [, target] of line.matchAll(LINK)) {
         if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(target)) {
-          continue; // http(s), mailto, tel, protocol-relative — never fetched.
+          continue; // http(s), mailto, tel, protocol-relative, never fetched.
         }
 
         const [rawPath, ...anchorParts] = target.split("#");
@@ -182,7 +182,7 @@ export function checkDocLinks(repoRoot) {
           stats = statSync(absolute);
         } catch {
           failures.push(
-            `${at} links to ${target} — expected a file at ${repoRelative}, found nothing`,
+            `${at} links to ${target}: expected a file at ${repoRelative}, found nothing`,
           );
           continue;
         }
@@ -195,7 +195,7 @@ export function checkDocLinks(repoRoot) {
 
         if (!anchors.has(anchor)) {
           failures.push(
-            `${at} links to ${target} — expected a heading anchored #${anchor} in ${repoRelative}, actual anchors: ${JSON.stringify([...anchors])}`,
+            `${at} links to ${target}: expected a heading anchored #${anchor} in ${repoRelative}, actual anchors: ${JSON.stringify([...anchors])}`,
           );
         }
       }

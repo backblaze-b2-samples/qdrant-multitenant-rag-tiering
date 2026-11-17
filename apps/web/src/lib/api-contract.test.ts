@@ -8,7 +8,7 @@ import { API_CLIENT_ROUTES } from "./api-client";
  * Every OpenAPI operation verb, not just the ones the client happens to use:
  * omitting a verb here silently exempts operations declared with it from the
  * "no unmapped operation" assertion below. The client's own narrower verb union
- * lives in `api-client.ts` on purpose — it is the set of verbs the hand-written
+ * lives in `api-client.ts` on purpose: it is the set of verbs the hand-written
  * client supports, which is a different set from what the spec may declare.
  */
 type RouteMethod =

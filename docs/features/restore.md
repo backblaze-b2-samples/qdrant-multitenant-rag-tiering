@@ -13,9 +13,9 @@ restore cost.
   `POST /tenants/{tenant_id}/restore`; also every edit of a parked tenant
 
 ## Core Functions
-- `app/service/restore.py` — `restore_locked`, `restore_tenant`, `query_tenant`
-- `app/repo/snapshot_store.py` — `download_to_spool` (streamed `get_object` into a spooled temp file, hashed)
-- `app/repo/qdrant_gateway.py` — `upload_snapshot` (`POST /collections/<c>/snapshots/upload?priority=snapshot&checksum=…`)
+- `app/service/restore.py`: `restore_locked`, `restore_tenant`, `query_tenant`
+- `app/repo/snapshot_store.py`: `download_to_spool` (streamed `get_object` into a spooled temp file, hashed)
+- `app/repo/qdrant_gateway.py`: `upload_snapshot` (`POST /collections/<c>/snapshots/upload?priority=snapshot&checksum=…`)
 
 ## Canonical Files
 - Pattern exemplar: `services/api/app/service/restore.py`

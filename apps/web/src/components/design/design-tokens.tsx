@@ -36,16 +36,16 @@ const motion = [
   { name: "ease-expressive", var: "--ease-expressive" },
 ];
 
-// Labels mirror the values declared in globals.css — keep in sync. Root
+// Labels mirror the values declared in globals.css: keep in sync. Root
 // font-size is 14px, so 1rem = 14px. The display role maps to the local
 // system stack so builds do not fetch fonts during compilation.
 const type = [
-  { label: "Page title — 1.75rem system 600", className: "page-title" },
-  { label: "Card title — 0.875rem system 600", className: "card-title" },
-  { label: "Body — 14px regular", className: "text-base" },
-  { label: "Small — 0.875rem", className: "text-sm" },
-  { label: "Caption — 0.75rem muted", className: "text-xs text-muted-foreground" },
-  { label: "Mono — size values", className: "font-mono text-xs tabular-nums" },
+  { label: "Page title: 1.75rem system 600", className: "page-title" },
+  { label: "Card title: 0.875rem system 600", className: "card-title" },
+  { label: "Body: 14px regular", className: "text-base" },
+  { label: "Small: 0.875rem", className: "text-sm" },
+  { label: "Caption: 0.75rem muted", className: "text-xs text-muted-foreground" },
+  { label: "Mono: size values", className: "font-mono text-xs tabular-nums" },
 ];
 
 export function DesignTokens() {
@@ -130,7 +130,7 @@ export function DesignTokens() {
           </CardHeader>
           <CardContent className="py-2">
             {type.map((t) => (
-              <Row key={t.label} label={t.label.split("—")[0].trim()}>
+              <Row key={t.label} label={t.label.split(":")[0].trim()}>
                 <p className={t.className}>{t.label}</p>
               </Row>
             ))}

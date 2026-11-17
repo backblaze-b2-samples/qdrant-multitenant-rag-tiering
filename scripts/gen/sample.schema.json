@@ -29,7 +29,7 @@
       "const": 1
     },
     "name": {
-      "description": "Display name. Must equal APP_NAME in apps/web/src/lib/app-config.ts — `pnpm gen:check` asserts it, because the branding check derives the FastAPI title from APP_NAME.",
+      "description": "Display name. Must equal APP_NAME in apps/web/src/lib/app-config.ts: `pnpm gen:check` asserts it, because the branding check derives the FastAPI title from APP_NAME.",
       "type": "string",
       "examples": ["My Sample App"]
     },

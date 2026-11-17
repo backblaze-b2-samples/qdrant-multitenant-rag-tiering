@@ -4,7 +4,7 @@
  *
  * Inputs (both checked in, both offline):
  *   docs/api/openapi.json        written by `pnpm contract:export` from the
- *                                FastAPI routers and Pydantic models — the
+ *                                FastAPI routers and Pydantic models: the
  *                                single source of truth for routes and shapes
  *   scripts/gen/api-gen.config.json  naming policy and deliberate exclusions
  *
@@ -63,7 +63,7 @@ function readJson(relativePath) {
   try {
     return JSON.parse(readFileSync(join(REPO_ROOT, relativePath), "utf8"));
   } catch (error) {
-    fail(`cannot read ${relativePath} — ${error.message}`);
+    fail(`cannot read ${relativePath}: ${error.message}`);
   }
 }
 
@@ -71,7 +71,7 @@ function readJson(relativePath) {
 
 function header(sources) {
   return [
-    "// GENERATED FILE — DO NOT EDIT.",
+    "// GENERATED FILE: DO NOT EDIT.",
     "//",
     "// Written by `pnpm gen:api` from:",
     ...sources.map((source) => `//   ${source}`),
@@ -157,7 +157,7 @@ function refName(ref) {
  * `required` list is emitted optional (`name?:`). Response models inherit
  * `ResponseModel` on the Python side, whose
  * `json_schema_serialization_defaults_required` config puts every serialized
- * field into `required` — so a nullable response field arrives as
+ * field into `required`, so a nullable response field arrives as
  * `field: T | null`, not `field?: T | null`, which is what the body actually
  * carries. Nothing here has to guess.
  */
@@ -243,7 +243,7 @@ function renderTypes(contract) {
   }
 
   if (blocks.length === 0) {
-    fail(`${CONTRACT} declares no object schemas — nothing to generate.`);
+    fail(`${CONTRACT} declares no object schemas, nothing to generate.`);
   }
 
   return `${header([CONTRACT])}\n${blocks.join("\n")}`;

@@ -1,8 +1,8 @@
 /**
  * The one preference this app genuinely honours.
  *
- * `next-themes` owns and persists the theme, so there is nothing to store here
- * — only the option list and the coercion the Settings form needs.
+ * `next-themes` owns and persists the theme, so there is nothing to store here,
+ * only the option list and the coercion the Settings form needs.
  *
  * The rest of the Settings page is a read-only view of the server's tiering
  * policy, which is configured by environment variables, not in the browser.

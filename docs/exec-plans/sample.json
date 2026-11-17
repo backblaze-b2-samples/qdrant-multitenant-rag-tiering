@@ -19,7 +19,7 @@
       "title": "Tiering",
       "route": "/tenants",
       "doc": "docs/features/tiering.md",
-      "summary": "idle policy and manual park: snapshot, multipart upload to B2, manifest last, verify, then drop",
+      "summary": "idle policy and manual park (snapshot, multipart upload to B2, manifest last, verify, then drop)",
       "workflow_heading": "Park Idle Tenants"
     },
     {
@@ -82,7 +82,7 @@
   "deployment_targets": [],
   "env_vars": [
     { "name": "B2_APPLICATION_KEY_ID", "required": true, "secret": true, "note": "B2 application key ID (**keyID** in the B2 console)" },
-    { "name": "B2_APPLICATION_KEY", "required": true, "secret": true, "note": "B2 application key (**applicationKey**) — shown once at creation" },
+    { "name": "B2_APPLICATION_KEY", "required": true, "secret": true, "note": "B2 application key (**applicationKey**): shown once at creation" },
     { "name": "B2_BUCKET_NAME", "required": true, "secret": false, "note": "bucket unique name (**Bucket Unique Name** in the B2 console)" },
     { "name": "B2_REGION", "required": true, "secret": false, "note": "the region inside the bucket's **Endpoint** (`s3.<region>.backblazeb2.com`); the S3 endpoint is derived from it" },
     { "name": "B2_PUBLIC_URL_BASE", "required": false, "secret": false, "note": "public object base URL, when the bucket is public" },
@@ -98,11 +98,11 @@
   "attribution_token": "b2ai-qdrant-multitenant-rag-tiering",
   "repo": { "org": "backblaze-b2-samples", "name": "qdrant-multitenant-rag-tiering" },
   "screenshots": [
-    {"path": "docs/images/dashboard.png", "alt": "Dashboard with hot and parked tenant counts, vector memory in use and freed, and bytes in B2", "caption": "**Dashboard** — Hot, parked and empty tenant counts, vector memory in use and freed, snapshot and corpus bytes in B2, a per-tenant vector footprint chart and the latest latency reports."},
-    {"path": "docs/images/tenants.png", "alt": "Tenants table with hot and parked states, points, vector memory and snapshot sizes", "caption": "**Tenants** — Every tenant with its hot or parked state, points, documents, vector memory in Qdrant (or memory freed) and snapshot size in B2, plus seed, tiering sweep and prune controls."},
-    {"path": "docs/images/tenant-query.png", "alt": "Tenant detail answering a query after restoring the parked collection from B2", "caption": "**Tenant detail** — A query to a parked tenant restores its collection from B2 first, reports the download and load time, then returns the ranked chunks beside the tenant's documents and snapshots in B2."},
-    {"path": "docs/images/reports.png", "alt": "Latency reports page with the benchmark form and the list of stored runs", "caption": "**Latency reports** — Pick up to six tenants and run a benchmark that parks and restores each one, with every past run listed from its report.json in B2."},
-    {"path": "docs/images/report-detail.png", "alt": "Latency report with warm, restore and post-restore latency charts and the figures table", "caption": "**Report detail** — One run's warm, restore and post-restore latency per tenant, the memory freed by parking, and the full figures table with a result-match check."},
-    {"path": "docs/images/library.png", "alt": "Library of the app's B2 objects grouped by tenant into corpus, snapshots and reports", "caption": "**Library** — Everything the app wrote to B2, grouped by tenant into corpus files, collection snapshots with their latest.json manifest, and latency reports."}
+    {"path": "docs/images/dashboard.png", "alt": "Dashboard with hot and parked tenant counts, vector memory in use and freed, and bytes in B2", "caption": "**Dashboard**: Hot, parked and empty tenant counts, vector memory in use and freed, snapshot and corpus bytes in B2, a per-tenant vector footprint chart and the latest latency reports."},
+    {"path": "docs/images/tenants.png", "alt": "Tenants table with hot and parked states, points, vector memory and snapshot sizes", "caption": "**Tenants**: Every tenant with its hot or parked state, points, documents, vector memory in Qdrant (or memory freed) and snapshot size in B2, plus seed, tiering sweep and prune controls."},
+    {"path": "docs/images/tenant-query.png", "alt": "Tenant detail answering a query after restoring the parked collection from B2", "caption": "**Tenant detail**: A query to a parked tenant restores its collection from B2 first, reports the download and load time, then returns the ranked chunks beside the tenant's documents and snapshots in B2."},
+    {"path": "docs/images/reports.png", "alt": "Latency reports page with the benchmark form and the list of stored runs", "caption": "**Latency reports**: Pick up to six tenants and run a benchmark that parks and restores each one, with every past run listed from its report.json in B2."},
+    {"path": "docs/images/report-detail.png", "alt": "Latency report with warm, restore and post-restore latency charts and the figures table", "caption": "**Report detail**: One run's warm, restore and post-restore latency per tenant, the memory freed by parking, and the full figures table with a result-match check."},
+    {"path": "docs/images/library.png", "alt": "Library of the app's B2 objects grouped by tenant into corpus, snapshots and reports", "caption": "**Library**: Everything the app wrote to B2, grouped by tenant into corpus files, collection snapshots with their latest.json manifest, and latency reports."}
   ]
 }

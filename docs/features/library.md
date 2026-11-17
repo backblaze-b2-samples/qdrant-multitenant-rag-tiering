@@ -10,7 +10,7 @@ per tenant, as corpus, snapshots or reports.
 - API: `GET /library?tenant_id=&kind=`
 
 ## Core Functions
-- `app/service/library.py` — `list_library`
+- `app/service/library.py`: `list_library`
 - `apps/web/src/components/library/library-browser.tsx`
 
 ## Canonical Files

@@ -11,42 +11,42 @@ app's own features instead of rebuilding the same shell. Storage is
 
 **What you get out of the box:**
 - Full-stack dashboard UI (Next.js 16, React 19, Tailwind v4, shadcn/ui, TanStack Query, Recharts)
-- Tenants — create tenants from text or Markdown files (or seed demo tenants), one Qdrant collection each, corpus in B2
-- Tiering — idle policy and manual park: snapshot, multipart upload to B2, manifest last, verify, then drop
-- Restore on query — the first query to a parked tenant restores it from B2 into any Qdrant node and reports the cost
-- Latency report — benchmark warm, restore and post-restore latency plus memory freed, stored as report.json in B2
-- Library — the app's own objects under rag/, grouped by tenant and kind
-- Bucket explorer — full-bucket browse, preview, download and delete, streamed through the API
-- Dashboard — hot, parked and empty counts, vector memory in use and freed, bytes in B2, recent reports
-- Settings — read-only tiering policy and the browser theme
+- Tenants: create tenants from text or Markdown files (or seed demo tenants), one Qdrant collection each, corpus in B2
+- Tiering: idle policy and manual park (snapshot, multipart upload to B2, manifest last, verify, then drop)
+- Restore on query: the first query to a parked tenant restores it from B2 into any Qdrant node and reports the cost
+- Latency report: benchmark warm, restore and post-restore latency plus memory freed, stored as report.json in B2
+- Library: the app's own objects under rag/, grouped by tenant and kind
+- Bucket explorer: full-bucket browse, preview, download and delete, streamed through the API
+- Dashboard: hot, parked and empty counts, vector memory in use and freed, bytes in B2, recent reports
+- Settings: read-only tiering policy and the browser theme
 - Backend with a strict layered architecture and structural tests (FastAPI, Python 3.12, boto3, qdrant-client, fastembed, Pydantic v2)
-- Agent-optimized docs — your AI coding agent can read the repo and start contributing immediately
+- Agent-optimized docs: your AI coding agent can read the repo and start contributing immediately
 <!-- gen:end readme-header -->
 
 <!-- gen:begin readme-screenshots -->
 ## What it looks like
 
-**Dashboard** — Hot, parked and empty tenant counts, vector memory in use and freed, snapshot and corpus bytes in B2, a per-tenant vector footprint chart and the latest latency reports.
+**Dashboard**: Hot, parked and empty tenant counts, vector memory in use and freed, snapshot and corpus bytes in B2, a per-tenant vector footprint chart and the latest latency reports.
 
 ![Dashboard with hot and parked tenant counts, vector memory in use and freed, and bytes in B2](docs/images/dashboard.png)
 
-**Tenants** — Every tenant with its hot or parked state, points, documents, vector memory in Qdrant (or memory freed) and snapshot size in B2, plus seed, tiering sweep and prune controls.
+**Tenants**: Every tenant with its hot or parked state, points, documents, vector memory in Qdrant (or memory freed) and snapshot size in B2, plus seed, tiering sweep and prune controls.
 
 ![Tenants table with hot and parked states, points, vector memory and snapshot sizes](docs/images/tenants.png)
 
-**Tenant detail** — A query to a parked tenant restores its collection from B2 first, reports the download and load time, then returns the ranked chunks beside the tenant's documents and snapshots in B2.
+**Tenant detail**: A query to a parked tenant restores its collection from B2 first, reports the download and load time, then returns the ranked chunks beside the tenant's documents and snapshots in B2.
 
 ![Tenant detail answering a query after restoring the parked collection from B2](docs/images/tenant-query.png)
 
-**Latency reports** — Pick up to six tenants and run a benchmark that parks and restores each one, with every past run listed from its report.json in B2.
+**Latency reports**: Pick up to six tenants and run a benchmark that parks and restores each one, with every past run listed from its report.json in B2.
 
 ![Latency reports page with the benchmark form and the list of stored runs](docs/images/reports.png)
 
-**Report detail** — One run's warm, restore and post-restore latency per tenant, the memory freed by parking, and the full figures table with a result-match check.
+**Report detail**: One run's warm, restore and post-restore latency per tenant, the memory freed by parking, and the full figures table with a result-match check.
 
 ![Latency report with warm, restore and post-restore latency charts and the figures table](docs/images/report-detail.png)
 
-**Library** — Everything the app wrote to B2, grouped by tenant into corpus files, collection snapshots with their latest.json manifest, and latency reports.
+**Library**: Everything the app wrote to B2, grouped by tenant into corpus files, collection snapshots with their latest.json manifest, and latency reports.
 
 ![Library of the app's B2 objects grouped by tenant into corpus, snapshots and reports](docs/images/library.png)
 <!-- gen:end readme-screenshots -->
@@ -88,10 +88,10 @@ To fill in `.env`, open the [Backblaze B2 dashboard](https://secure.backblaze.co
 <!-- gen:begin readme-credentials -->
 1. **Create a bucket** and an **application key** with `Read and Write`
    permission, then paste each value into `.env`:
-   - `B2_APPLICATION_KEY_ID` — B2 application key ID (**keyID** in the B2 console)
-   - `B2_APPLICATION_KEY` — B2 application key (**applicationKey**) — shown once at creation
-   - `B2_BUCKET_NAME` — bucket unique name (**Bucket Unique Name** in the B2 console)
-   - `B2_REGION` — the region inside the bucket's **Endpoint** (`s3.<region>.backblazeb2.com`); the S3 endpoint is derived from it
+   - `B2_APPLICATION_KEY_ID`: B2 application key ID (**keyID** in the B2 console)
+   - `B2_APPLICATION_KEY`: B2 application key (**applicationKey**): shown once at creation
+   - `B2_BUCKET_NAME`: bucket unique name (**Bucket Unique Name** in the B2 console)
+   - `B2_REGION`: the region inside the bucket's **Endpoint** (`s3.<region>.backblazeb2.com`); the S3 endpoint is derived from it
 
    B2 shows an application key once, at creation. The optional variables are
    documented in `.env.example` and in the delivery runbooks.
@@ -244,14 +244,14 @@ use you own auth, tenant-scoped access, capacity and operations.
 ## Core Features
 
 <!-- gen:begin readme-core-features -->
-- [Tenants](docs/features/tenants.md) — create tenants from text or Markdown files (or seed demo tenants), one Qdrant collection each, corpus in B2
-- [Tiering](docs/features/tiering.md) — idle policy and manual park: snapshot, multipart upload to B2, manifest last, verify, then drop
-- [Restore on query](docs/features/restore.md) — the first query to a parked tenant restores it from B2 into any Qdrant node and reports the cost
-- [Latency report](docs/features/latency-report.md) — benchmark warm, restore and post-restore latency plus memory freed, stored as report.json in B2
-- [Library](docs/features/library.md) — the app's own objects under rag/, grouped by tenant and kind
-- [Bucket explorer](docs/features/file-browser.md) — full-bucket browse, preview, download and delete, streamed through the API
-- [Dashboard](docs/features/dashboard.md) — hot, parked and empty counts, vector memory in use and freed, bytes in B2, recent reports
-- [Settings](docs/features/settings.md) — read-only tiering policy and the browser theme
+- [Tenants](docs/features/tenants.md): create tenants from text or Markdown files (or seed demo tenants), one Qdrant collection each, corpus in B2
+- [Tiering](docs/features/tiering.md): idle policy and manual park (snapshot, multipart upload to B2, manifest last, verify, then drop)
+- [Restore on query](docs/features/restore.md): the first query to a parked tenant restores it from B2 into any Qdrant node and reports the cost
+- [Latency report](docs/features/latency-report.md): benchmark warm, restore and post-restore latency plus memory freed, stored as report.json in B2
+- [Library](docs/features/library.md): the app's own objects under rag/, grouped by tenant and kind
+- [Bucket explorer](docs/features/file-browser.md): full-bucket browse, preview, download and delete, streamed through the API
+- [Dashboard](docs/features/dashboard.md): hot, parked and empty counts, vector memory in use and freed, bytes in B2, recent reports
+- [Settings](docs/features/settings.md): read-only tiering policy and the browser theme
 <!-- gen:end readme-core-features -->
 
 ## Tech Stack
@@ -268,13 +268,13 @@ use you own auth, tenant-scoped access, capacity and operations.
 | --- | --- |
 | `pnpm run setup` | One-time cold start: copy `.env.example` → `.env` (only if missing), install workspace deps, create the backend venv, install locked API deps |
 | `pnpm dev` | Start frontend + backend (runs the `pnpm run doctor` preflight first) |
-| `pnpm wait-ready` | Block until the running web + API answer, print one line, exit 0/1 — use instead of sleeping before driving the app |
+| `pnpm wait-ready` | Block until the running web + API answer, print one line, exit 0/1: use instead of sleeping before driving the app |
 | `pnpm contract:export` | Export the FastAPI OpenAPI contract into `docs/api/openapi.json` |
 | `pnpm contract:check` | Verify the exported contract and the generated client routes agree, both ways |
 | `pnpm gen:api` | Regenerate the shared types, the client route registry and the query-key factory from the exported contract |
 | `pnpm gen:docs` | Regenerate the marker-delimited doc regions from `docs/exec-plans/sample.json` |
 | `pnpm gen:check` | Fail if any generated file or doc region is stale (first step of `pnpm verify:web`) |
-| `pnpm verify` | Credential-free pre-PR suite — runs `check:agent-docs`, `verify:api`, then `verify:web` |
+| `pnpm verify` | Credential-free pre-PR suite: runs `check:agent-docs`, `verify:api`, then `verify:web` |
 | `pnpm verify:full` | `pnpm verify` plus Playwright E2E; needs a live local stack, real `.env`, a free web port, and Chromium |
 | `pnpm test:verify` | Run throwaway verification specs from `apps/web/e2e/verify/` against the app, with the shared browser fixtures |
 <!-- gen:end readme-commands -->
@@ -308,7 +308,7 @@ ships with it.
 <!-- gen:begin readme-doc-map -->
 | Doc | Purpose |
 | --- | --- |
-| [AGENTS.md](AGENTS.md) | Agent table of contents — start here |
+| [AGENTS.md](AGENTS.md) | Agent table of contents: start here |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System layout, layering, data flows |
 | [docs/features/](docs/features/) | Feature docs (tenants, tiering, restore on query, latency report, library, bucket explorer, dashboard, settings) |
 | [docs/design-system.md](docs/design-system.md) | Design tokens, primitives, loader, error/empty states |

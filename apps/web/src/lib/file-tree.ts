@@ -87,7 +87,7 @@ function countFiles(nodes: TreeNode[]): number {
  * actually on screen.
  *
  * Expanding only the top level left `/files` showing four folder rows and zero
- * files while the page said "Click a file to preview it" — the newest objects
+ * files while the page said "Click a file to preview it": the newest objects
  * lived two levels deep, so the page looked empty and its own instruction was
  * unactionable.
  *

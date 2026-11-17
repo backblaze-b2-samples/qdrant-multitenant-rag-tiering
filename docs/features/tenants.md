@@ -13,11 +13,11 @@ Qdrant collection `tenant_<tenant>` while it is hot.
   `POST /tenants/{tenant_id}/query`
 
 ## Core Functions
-- `app/service/tenants.py` — create, read, edit, delete; state derivation
-- `app/service/ingest.py` — chunking (120 words, 20 overlap), deterministic point ids, upsert
-- `app/service/seed.py` + `seed_corpus.py` — six synthetic tenants on distinct subjects
-- `app/service/validation.py` — tenant id and document name rules
-- `app/repo/embedder.py` — fastembed `BAAI/bge-small-en-v1.5`, CPU (CUDA when available)
+- `app/service/tenants.py`: create, read, edit, delete; state derivation
+- `app/service/ingest.py`: chunking (120 words, 20 overlap), deterministic point ids, upsert
+- `app/service/seed.py` + `seed_corpus.py`: six synthetic tenants on distinct subjects
+- `app/service/validation.py`: tenant id and document name rules
+- `app/repo/embedder.py`: fastembed `BAAI/bge-small-en-v1.5`, CPU (CUDA when available)
 
 ## Canonical Files
 - Pattern exemplar: `services/api/app/service/tenants.py`

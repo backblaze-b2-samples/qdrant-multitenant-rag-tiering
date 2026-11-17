@@ -4,7 +4,7 @@
  *
  * Zero dependencies on purpose (node: builtins + local ./agent-docs modules):
  * `pnpm check:agent-docs` must run without `pnpm install`, and in any copy of
- * this starter kit — including one with no git work tree.
+ * this starter kit, including one with no git work tree.
  */
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -30,7 +30,7 @@ function check(condition, message, detail) {
     return true;
   }
 
-  failures.push(detail ? `${message} — ${detail}` : message);
+  failures.push(detail ? `${message}: ${detail}` : message);
   return false;
 }
 
@@ -40,7 +40,7 @@ function repoPath(relativePath) {
 
 /**
  * @returns {string|null} the contents, or null when the file is missing *or*
- * empty — both are failures. readFileSync returns "" for a 0-byte file too, so
+ * empty: both are failures. readFileSync returns "" for a 0-byte file too, so
  * a truthiness guard let an empty file pass its `exists` assertion and then
  * silently skip its entire check group.
  */
@@ -153,7 +153,7 @@ if (security && agents) {
     check(
       anchors.length > 0,
       "docs/SECURITY.md links into AGENTS.md by anchor",
-      "expected a link like [AGENTS.md §12 — Secret Handling](../AGENTS.md#12-secret-handling), actual: no anchored AGENTS.md link",
+      "expected a link like [AGENTS.md §12: Secret Handling](../AGENTS.md#12-secret-handling), actual: no anchored AGENTS.md link",
     )
   ) {
     check(
@@ -236,7 +236,7 @@ if (envIgnores.skip) {
 
 // --- Vercel deploy button: a whole-app contract or none ------------------
 // A deploy button is optional (a fork may drop it). But IF the README ships a
-// Vercel button, it must deploy the WHOLE app — never a partial slice — and be
+// Vercel button, it must deploy the WHOLE app (never a partial slice) and be
 // backed by the versioned delivery contract. Two shapes are valid: a single
 // project whose root vercel.json declares both the `web` and `api` services
 // (Vercel Services, one origin), or two buttons that each carry a

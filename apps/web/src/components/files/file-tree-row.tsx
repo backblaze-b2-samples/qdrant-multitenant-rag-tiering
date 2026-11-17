@@ -159,7 +159,7 @@ export function FileTreeRow({
       className="tree-row group flex w-full min-w-0 items-center gap-1 rounded-md pr-2 text-sm transition-colors hover:bg-accent/60 focus-within:bg-accent/60"
       style={{ paddingInlineStart: `${treeIndent(depth, 32)}px` }}
     >
-      {/* The row itself opens the preview — clicking a file is the obvious
+      {/* The row itself opens the preview: clicking a file is the obvious
           first-time gesture, and it used to be inert. The actions menu stays a
           sibling (not a descendant) so we never nest interactive elements. */}
       <button

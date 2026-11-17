@@ -8,9 +8,9 @@ import { useState } from "react";
 import { ApiError } from "@/lib/api-client";
 
 // Sane defaults for a B2-backed dashboard:
-//  - 30s staleTime — file lists & stats don't change second-to-second; this
+//  - 30s staleTime: file lists & stats don't change second-to-second; this
 //    cuts duplicate fetches across components hitting the same endpoint.
-//  - retry: 1 by default, but never retry 4xx — those won't get better on
+//  - retry: 1 by default, but never retry 4xx: those won't get better on
 //    a second try and would just delay the inline ErrorState.
 //  - refetchOnWindowFocus stays on (TanStack default) so the dashboard
 //    self-heals when the user comes back to the tab.

@@ -3,7 +3,7 @@
  *
  * Zero dependencies (node: builtins only). Three-state on purpose:
  * ignored / not ignored / could-not-evaluate (thrown). "Not ignored" is never
- * reused for an evaluation error — a swallowed error used to make the negated
+ * reused for an evaluation error: a swallowed error used to make the negated
  * ".env.example remains trackable" assertion pass without evaluating anything.
  *
  * Evaluation is per path, never per group: `git check-ignore` fails for one
@@ -32,7 +32,7 @@ const MUST_BE_TRACKABLE = [
 
 class IgnoreUnavailableError extends Error {}
 
-/** A repo-tracked `.gitignore` — not `.git/info/exclude`, not a global file. */
+/** A repo-tracked `.gitignore`, not `.git/info/exclude`, not a global file. */
 function isRepoIgnoreSource(source) {
   const normalized = source.replace(/\\/g, "/");
 
@@ -123,7 +123,7 @@ function evaluateIgnore(repoRoot, relativePath) {
  * Runs the ignore checks path by path.
  *
  * @returns {{passes: string[], failures: string[], skip: string|null,
- * unevaluated: string[]}} — `skip` is set only when *no* path could be
+ * unevaluated: string[]}}: `skip` is set only when *no* path could be
  * evaluated (e.g. no git work tree): then the group was abandoned wholesale,
  * with no passes, no failures and no exit code. Otherwise every evaluable path
  * is reported, and `unevaluated` lists the individual paths git could not
@@ -159,11 +159,11 @@ export function checkEnvIgnores(repoRoot) {
         passes.push(`${path} is ignored by a repo-tracked .gitignore`);
       } else if (mustBeIgnored) {
         failures.push(
-          `${path} is ignored by a repo-tracked .gitignore — expected ignored, actual not ignored (${why})`,
+          `${path} is ignored by a repo-tracked .gitignore: expected ignored, actual not ignored (${why})`,
         );
       } else if (ignored) {
         failures.push(
-          `${path} remains trackable — expected trackable, actual ignored (${why}); add a negation pattern after the ignore patterns`,
+          `${path} remains trackable: expected trackable, actual ignored (${why}); add a negation pattern after the ignore patterns`,
         );
       } else {
         passes.push(`${path} remains trackable`);

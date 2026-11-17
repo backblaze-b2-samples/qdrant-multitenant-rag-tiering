@@ -2,12 +2,12 @@
  * Branding / identity drift checks for `scripts/check-agent-docs.mjs`.
  *
  * The starter kit is cloned and rebranded into new apps, and that rename step
- * is where identity silently drifts apart — one surface gets the new name, the
+ * is where identity silently drifts apart: one surface gets the new name, the
  * next keeps the old one. These checks fail loudly when that happens.
  *
  * Zero dependencies (node: builtins only) and no git dependency, matching the
  * rest of the checker: it must run in any copy of the starter, including one
- * with no work tree. None of the assertions hardcode the current name — they
+ * with no work tree. None of the assertions hardcode the current name: they
  * check *derivation / consistency*, so they hold for the starter itself (all
  * "Qdrant Multitenant RAG Tiering") and for any rebranded clone (all the new name).
  *
@@ -19,7 +19,7 @@
  *     copy a rebrand forgets, because the frontend imports APP_NAME while Python
  *     cannot.
  *  2. The display name is not hardcoded in frontend source outside
- *     app-config.ts — components import the constant, so a rebrand touches
+ *     app-config.ts: components import the constant, so a rebrand touches
  *     exactly one frontend file.
  *  3. The B2 attribution token is one value across `user_agent_extra` (the
  *     mandatory custom user agent) and `utm_content` (the Backblaze marketing
@@ -100,7 +100,7 @@ export function checkBranding(repoRoot) {
       passes.push(message);
       return ok;
     }
-    failures.push(detail ? `${message} — ${detail}` : message);
+    failures.push(detail ? `${message}: ${detail}` : message);
     return ok;
   };
 
@@ -207,7 +207,7 @@ export function checkBranding(repoRoot) {
   record(
     strays.length === 0,
     "branding: display name lives only in app-config.ts (frontend imports it)",
-    `expected no frontend file outside app-config.ts to hardcode "${appName}" — import { APP_NAME } instead. Offending: ${JSON.stringify(strays.map(rel))}`,
+    `expected no frontend file outside app-config.ts to hardcode "${appName}": import { APP_NAME } instead. Offending: ${JSON.stringify(strays.map(rel))}`,
   );
 
   // --- 3. one B2 attribution token everywhere -----------------------------
@@ -234,7 +234,7 @@ export function checkBranding(repoRoot) {
 
     // Scan by surface: `user_agent_extra` is a boto3 kwarg (Python only);
     // `utm_content` lives in URLs (Markdown/JS/TS). Splitting the scans by
-    // extension — and skipping this checker's own source — keeps the checker
+    // extension (and skipping this checker's own source) keeps the checker
     // from matching the very regexes it uses to find the token.
     const checkerDir = join(repoRoot, "scripts", "agent-docs");
     const notChecker = (file) => !file.startsWith(checkerDir);

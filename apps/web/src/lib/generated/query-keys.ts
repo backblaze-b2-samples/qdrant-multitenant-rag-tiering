@@ -1,4 +1,4 @@
-// GENERATED FILE — DO NOT EDIT.
+// GENERATED FILE: DO NOT EDIT.
 //
 // Written by `pnpm gen:api` from:
 //   docs/api/openapi.json

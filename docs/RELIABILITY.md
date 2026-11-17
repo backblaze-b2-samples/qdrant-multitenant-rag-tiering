@@ -68,7 +68,7 @@ mode (upload error, size mismatch, checksum mismatch) has its own test in
 - `/metrics` exposes request counts and durations plus `tenant_parks_total` and `tenant_restores_total`
 - Latency reports in B2 record warm, restore and post-restore latency and memory freed per run
 
-## Stateful Counters — durability caveats
+## Stateful Counters: durability caveats
 
 The download counter, the `/metrics` counters, the per-tenant idle clocks and the transitional states are **in-process, per replica**:
 

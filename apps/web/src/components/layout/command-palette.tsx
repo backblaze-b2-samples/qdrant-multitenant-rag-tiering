@@ -136,7 +136,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   value={`file ${f.filename} ${f.key}`}
                   // Land on the chosen file, not just on the Files page: this
                   // used to push "/files" and nothing else, so picking an exact
-                  // filename left it inside a collapsed folder — and produced no
+                  // filename left it inside a collapsed folder, and produced no
                   // visible change at all when already on /files.
                   onSelect={runThen(() => router.push(previewHref(f.key)))}
                 >

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Preflight environment check — runs automatically before `pnpm dev`.
+// Preflight environment check: runs automatically before `pnpm dev`.
 // Surfaces every common starter-kit setup gotcha *before* uvicorn or
 // next try to start, with actionable error messages.
 //
@@ -32,7 +32,7 @@ const VENV_UVICORN = resolve(REPO_ROOT, "services/api/.venv/bin/uvicorn");
 // .env.example placeholders. `app/config/settings.py` reads this very file, so
 // this preflight cannot drift from the server it is checking. Parsed rather
 // than imported: doctor stays zero-dependency and must work before the venv
-// exists — it is the script that tells you to create it.
+// exists: it is the script that tells you to create it.
 const B2_VARS_FILE = "services/api/app/config/b2_required_vars.json";
 
 // Required minimum versions. Bump as upstream support shifts.
@@ -143,7 +143,7 @@ function checkVenv() {
 }
 
 function parseEnvFile(path) {
-  // Minimal .env parser — enough for KEY=value lines, ignores comments
+  // Minimal .env parser: enough for KEY=value lines, ignores comments
   // and quoted strings. We don't need the full dotenv grammar here.
   const out = {};
   const text = readFileSync(path, "utf8");
@@ -190,7 +190,7 @@ function checkEnv() {
   if (!b2Vars) {
     fail(
       `Could not read the required B2 variables from ${B2_VARS_FILE}`,
-      `Restore ${B2_VARS_FILE} — app/config/settings.py and this check both read it as the single source of truth`,
+      `Restore ${B2_VARS_FILE}: app/config/settings.py and this check both read it as the single source of truth`,
     );
     return;
   }
@@ -263,7 +263,7 @@ async function checkPort({ port, name }) {
   if (results.length === 0) {
     warn(
       `Could not probe port ${port} (${name}) on any interface: ${probed.map(formatBindDiagnostic).join("; ")}`,
-      "ok if this host has no IPv4/IPv6 stack for local servers — `pnpm dev` will report the real bind error if it can't start.",
+      "ok if this host has no IPv4/IPv6 stack for local servers: `pnpm dev` will report the real bind error if it can't start.",
     );
     return;
   }
@@ -271,7 +271,7 @@ async function checkPort({ port, name }) {
   if (busy) {
     warn(
       `Port ${port} (${name}) is already in use`,
-      `ok — \`pnpm dev\` will pick the next free port automatically. ` +
+      `ok: \`pnpm dev\` will pick the next free port automatically. ` +
         `To inspect what's on it: \`lsof -nP -iTCP:${port} -sTCP:LISTEN\`.`,
     );
   }
@@ -311,7 +311,7 @@ async function main() {
     process.exit(1);
   }
 
-  // Warnings only — non-fatal so `pnpm dev` can still proceed if the
+  // Warnings only: non-fatal so `pnpm dev` can still proceed if the
   // user genuinely wants to (e.g. running a second instance).
   console.error("\nProceeding despite warnings.\n");
 }

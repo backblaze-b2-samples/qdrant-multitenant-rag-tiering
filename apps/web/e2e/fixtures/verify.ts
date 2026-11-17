@@ -4,7 +4,7 @@
  *
  * Collecting console errors and failed requests is something almost every
  * browser-driven verification script ends up doing by hand, and doing it by hand
- * means each one starts listening at a slightly different moment — usually after
+ * means each one starts listening at a slightly different moment: usually after
  * the first navigation, which is exactly when the interesting errors fire. As a
  * fixture the listeners are attached before the spec gets the page, so nothing
  * is missed.
@@ -51,7 +51,7 @@ export const test = base.extend<VerifyFixtures>({
     });
     page.on("requestfailed", (request) => {
       const reason = request.failure()?.errorText ?? "failed";
-      diagnostics.failedRequests.push(`${request.method()} ${request.url()} — ${reason}`);
+      diagnostics.failedRequests.push(`${request.method()} ${request.url()}: ${reason}`);
     });
     page.on("response", (response) => {
       if (response.status() >= 400) {
@@ -84,13 +84,13 @@ export function diagnosticsSummary(diagnostics: Diagnostics): string {
  * authoritative per-frame captions and per-run outcomes instead of guessing from
  * filenames.
  *
- * `verifyDir` is the app's gitignored `.local/verify/` directory — the PARENT of
+ * `verifyDir` is the app's gitignored `.local/verify/` directory: the PARENT of
  * this spec's shot dir. Pass ONE shape:
  *   frame: { shot, status, caption, note }
  *          shot    "<lens>/<file>.png", the tail after .local/verify/
  *          status  ok | error | diagnostic | internal
  *          caption <=5-word sentence-case phrase naming the action or state
- *          note    ONLY for error/diagnostic — one sentence on why it is flagged
+ *          note    ONLY for error/diagnostic: one sentence on why it is flagged
  *   run:   { run, scenario, result }
  *          result  pass | fail | mixed | blocked, and ONLY when actually known
  *

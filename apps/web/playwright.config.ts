@@ -5,7 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
  *
  * `chromium` is the kit's own committed smoke suite. `verify` is for the
  * throwaway, app-specific specs a verification pass writes into
- * `e2e/verify/` — a gitignored directory, so those specs can never be swept
+ * `e2e/verify/`: a gitignored directory, so those specs can never be swept
  * into a commit by a `git add -A`.
  *
  * Verification specs run inside the pnpm workspace on purpose. Driving the app
@@ -20,7 +20,7 @@ import { defineConfig, devices } from "@playwright/test";
  *
  * This is env-driven rather than pinned to `localhost:3000`, and that matters
  * for more than tidiness. A verification pass that finds ports 3000/8000
- * already held — by a human's dev server for a *different* app — boots the app
+ * already held (by a human's dev server for a *different* app) boots the app
  * under test on alternate ports instead of killing what is running. With a
  * pinned base URL, `reuseExistingServer` would then find the *other* server
  * answering on 3000, skip launching, and every relative navigation would drive
@@ -40,7 +40,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   // `list` so a run is readable in a terminal or an agent transcript; the HTML
-  // report is still written but never auto-served — `open: "never"` is what stops
+  // report is still written but never auto-served: `open: "never"` is what stops
   // a headless run blocking on a report server nobody is there to close.
   reporter: [["list"], ["html", { open: "never" }]],
   use: {

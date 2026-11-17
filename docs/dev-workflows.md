@@ -59,14 +59,14 @@ What each gate checks, its prerequisites, and how to recover when one fails:
 
 ## Refactor
 
-- [ ] Read `ARCHITECTURE.md` — respect layering rules
+- [ ] Read `ARCHITECTURE.md`: respect layering rules
 - [ ] Ensure structural tests still pass: `pnpm check:structure`
 - [ ] No behavior changes without updating feature docs
 
 ## Documentation Update
 
 - [ ] Update only the canonical location (see AGENTS.md §9 doc update mapping)
-- [ ] Never duplicate content — link instead
+- [ ] Never duplicate content: link instead
 - [ ] Update `<!-- last_verified: YYYY-MM-DD -->` header
 
 ## Pull Request
@@ -74,15 +74,15 @@ What each gate checks, its prerequisites, and how to recover when one fails:
 - [ ] One coherent change per PR
 - [ ] Run `pnpm verify` before submitting
 - [ ] Docs updated in the same PR as code changes
-- [ ] Only change files relevant to the task — no drive-by improvements
+- [ ] Only change files relevant to the task, no drive-by improvements
 
 GitHub surfaces this contract automatically through two templates, so reviewers
 see it without opening this file:
 
-- `.github/PULL_REQUEST_TEMPLATE.md` — prefills every PR with scope, a
+- `.github/PULL_REQUEST_TEMPLATE.md`: prefills every PR with scope, a
   verification table, skipped-check explanations, UI evidence, docs, and
   risk/rollback.
-- `.github/ISSUE_TEMPLATE/coding-agent-handoff.md` — prefills a scoped
+- `.github/ISSUE_TEMPLATE/coding-agent-handoff.md`: prefills a scoped
   implementation request with the context a coding agent needs.
 
 The templates are prompts for evidence, not a second rulebook: the rules live in
@@ -93,14 +93,14 @@ future issue and PR body and could never be corrected retroactively.
 ### Review ownership
 
 This repository has no `CODEOWNERS` file, so GitHub assigns no reviewer
-automatically — request one manually. This is the canonical statement of that
+automatically: request one manually. This is the canonical statement of that
 status: if `CODEOWNERS` is ever added, update this section, and the templates
 that point here stay correct without edits.
 
 ## Releases and versioning
 
 Tags follow SemVer (`vMAJOR.MINOR.PATCH`) and mark the states external
-documentation points at. A release aggregates many PRs — nothing is versioned
+documentation points at. A release aggregates many PRs, nothing is versioned
 per-PR, and `main` between releases carries no compatibility promise.
 
 The versioned surface is what someone building on this repo actually depends on:
@@ -110,7 +110,7 @@ required setup steps, and the shared scaffolding contract in [AGENTS.md](../AGEN
 | Bump | The range since the last tag contains |
 |------|---------------------------------------|
 | **major** | a removed or renamed HTTP route, or a changed request/response shape; a renamed, removed, or newly required env var; a raised minimum runtime (Node, Python, pnpm); a new mandatory setup or deploy step; a renamed or removed `pnpm` command the docs name; a moved or deleted scaffolding-contract piece; a bumped Qdrant image or a changed snapshot manifest field |
-| **minor** | anything purely additive — a new feature, route, optional env var, command, or check |
+| **minor** | anything purely additive: a new feature, route, optional env var, command, or check |
 | **patch** | docs, CI, refactors, and fixes that leave every surface above unchanged |
 
 Highest match wins: one breaking change anywhere in the range makes the whole
@@ -118,7 +118,7 @@ release a major.
 
 Cut a release when external documentation is about to be written or refreshed,
 and when a breaking change has landed. Classify by reading the range, not the
-commit prefixes — a breaking change can land under a `feat:` or `fix:` message:
+commit prefixes: a breaking change can land under a `feat:` or `fix:` message:
 
 ```bash
 git log --oneline <last-tag>..main   # classify against the table above

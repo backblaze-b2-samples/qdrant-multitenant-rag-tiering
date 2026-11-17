@@ -21,7 +21,7 @@
  * environment gets the right port for free.
  *
  * Exit codes: 0 ready, 1 not ready before the deadline, 2 the sandbox forbids
- * local connections (see docs/verification.md — the same EPERM/EACCES split
+ * local connections (see docs/verification.md: the same EPERM/EACCES split
  * scripts/pick-port.mjs makes for binds).
  */
 import { request } from "node:http";
@@ -41,7 +41,7 @@ const DEFAULT_TIMEOUT_SECONDS = 120;
 const HOSTS = ["127.0.0.1", "::1"];
 
 /** A single attempt this long means the server is up but still compiling, not
- *  that it is absent — so it is retried rather than treated as fatal. */
+ *  that it is absent, so it is retried rather than treated as fatal. */
 const ATTEMPT_TIMEOUT_MS = 30_000;
 const RETRY_DELAY_MS = 250;
 
@@ -115,7 +115,7 @@ function candidatePorts(explicit, start, range) {
 /**
  * One HTTP GET. Resolves a discriminated result rather than throwing, so the
  * caller can tell "nothing listening yet" (retry) from "the sandbox says no"
- * (stop) — the same four-outcome discipline as scripts/local-bind.mjs.
+ * (stop): the same four-outcome discipline as scripts/local-bind.mjs.
  *
  * @returns {Promise<{status:"answered",code:number,body:string}
  *                 | {status:"closed"}
@@ -196,7 +196,7 @@ async function waitForService({ label, path, accept, ports, deadline }) {
     }
 
     // Every candidate was refused. If *every* refusal was a permission error
-    // there is nothing to wait for — the sandbox will keep saying no.
+    // there is nothing to wait for: the sandbox will keep saying no.
     if (deniedCode) {
       return {
         ready: false,
@@ -292,7 +292,7 @@ async function main() {
 
   const denied = failures.some((failure) => failure.reason === "denied");
   process.stdout.write(
-    `wait-ready: NOT-READY after ${elapsed}s — ${failures.map((failure) => failure.detail).join("; ")}\n`,
+    `wait-ready: NOT-READY after ${elapsed}s: ${failures.map((failure) => failure.detail).join("; ")}\n`,
   );
   process.exit(denied ? 2 : 1);
 }

@@ -2,9 +2,9 @@
 
 `_counter_path()` walks up from this module's `__file__` to the repo root so
 runtime state stays outside `uvicorn --reload`'s watch tree. A deployment that
-ships *only* services/api has no repo root above it — Railway with the service
+ships *only* services/api has no repo root above it (Railway with the service
 root directory set to services/api, or a Docker build that copies just this
-directory — and indexing past the filesystem root raised IndexError at import
+directory), and indexing past the filesystem root raised IndexError at import
 time, taking the whole API down before it could serve a request. Both layouts
 are pinned here so the anchoring cannot silently regress to either extreme.
 """

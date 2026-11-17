@@ -4,7 +4,7 @@ import { Section } from "./section";
 
 // Showcase for the blaze GeneratingLoader. Tiles use `bg-muted` (not the
 // card background) so the white sparkle in the `stars` variant has enough
-// contrast to register on light themes — the white-sparkle drop-shadow
+// contrast to register on light themes: the white-sparkle drop-shadow
 // stroke is intentionally subtle and disappears on pure-white surfaces.
 export function DesignLoader() {
   return (
@@ -16,7 +16,7 @@ export function DesignLoader() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="border-b border-border py-4 px-5">
-            <CardTitle className="card-title">sm — inline (button)</CardTitle>
+            <CardTitle className="card-title">sm: inline (button)</CardTitle>
           </CardHeader>
           <CardContent className="p-5">
             <button
@@ -32,7 +32,7 @@ export function DesignLoader() {
 
         <Card>
           <CardHeader className="border-b border-border py-4 px-5">
-            <CardTitle className="card-title">md — tile placeholder</CardTitle>
+            <CardTitle className="card-title">md: tile placeholder</CardTitle>
           </CardHeader>
           <CardContent className="p-5">
             <div className="flex items-center justify-center w-full aspect-video rounded-md bg-muted">
@@ -43,7 +43,7 @@ export function DesignLoader() {
 
         <Card className="md:col-span-2">
           <CardHeader className="border-b border-border py-4 px-5">
-            <CardTitle className="card-title">lg — canvas with label</CardTitle>
+            <CardTitle className="card-title">lg: canvas with label</CardTitle>
           </CardHeader>
           <CardContent className="p-5">
             <div className="flex items-center justify-center rounded-xl border border-border bg-muted aspect-video">
@@ -54,7 +54,7 @@ export function DesignLoader() {
 
         <Card>
           <CardHeader className="border-b border-border py-4 px-5">
-            <CardTitle className="card-title">variant=&quot;stars&quot; — md</CardTitle>
+            <CardTitle className="card-title">variant=&quot;stars&quot;: md</CardTitle>
           </CardHeader>
           <CardContent className="p-5">
             <div className="flex items-center justify-center w-full aspect-video rounded-md bg-muted">
@@ -65,7 +65,7 @@ export function DesignLoader() {
 
         <Card>
           <CardHeader className="border-b border-border py-4 px-5">
-            <CardTitle className="card-title">variant=&quot;stars&quot; — lg + label</CardTitle>
+            <CardTitle className="card-title">variant=&quot;stars&quot;: lg + label</CardTitle>
           </CardHeader>
           <CardContent className="p-5">
             <div className="flex items-center justify-center w-full aspect-video rounded-md bg-muted">
@@ -76,7 +76,7 @@ export function DesignLoader() {
 
         <Card className="md:col-span-2">
           <CardHeader className="border-b border-border py-4 px-5">
-            <CardTitle className="card-title">md over scrim — iterating on existing content</CardTitle>
+            <CardTitle className="card-title">md over scrim: iterating on existing content</CardTitle>
           </CardHeader>
           <CardContent className="p-5">
             <div className="relative w-full overflow-hidden rounded-lg aspect-video bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900">

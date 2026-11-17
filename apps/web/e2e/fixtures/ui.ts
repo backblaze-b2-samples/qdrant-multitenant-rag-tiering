@@ -9,7 +9,7 @@
  * Import from a spec as:
  *   import { test, expect, waitForTerminal, safeShot } from "../fixtures/verify";
  *
- * Relative, workspace-internal imports only — an absolute path into one
+ * Relative, workspace-internal imports only: an absolute path into one
  * machine's home directory does not run on anyone else's machine or in CI.
  */
 import type { Locator, Page } from "@playwright/test";
@@ -21,7 +21,7 @@ export const DEFAULT_TIMEOUT = 30_000;
  * `role="combobox"` is what the underlying Radix trigger button ALWAYS exposes,
  * so it is the primary. `data-slot="select-trigger"` is only a secondary: a
  * wrapping shadcn <FormControl> overrides data-slot to "form-control", so on any
- * Select inside a form the data-slot selector matches ZERO elements — and a
+ * Select inside a form the data-slot selector matches ZERO elements, and a
  * script that trusted it silently kept the default option while reporting the
  * option as honored. It stays as a fallback for a custom trigger that renders no
  * combobox role.
@@ -31,7 +31,7 @@ const SELECT_TRIGGERS = ['[role="combobox"]', '[data-slot="select-trigger"]'];
 /**
  * Open a shadcn/ui <Select> and pick an option by visible text; options render
  * in a portal as `[role="option"]`. The trigger is resolved from
- * SELECT_TRIGGERS — the first selector that matches anything wins. Pass
+ * SELECT_TRIGGERS: the first selector that matches anything wins. Pass
  * `triggerSelector` to disambiguate multiple Selects on one screen; it overrides
  * the resolution entirely (`':nth-match([role="combobox"], 2)'` for the Nth
  * Select on a form, `'[role="combobox"]:near(:text("Aspect"))'` to anchor on a
@@ -56,7 +56,7 @@ export async function selectShadcnOption(
 
   if (!trigger) {
     throw new Error(
-      `selectShadcnOption(${optionText}): no Select trigger matched ${candidates.join(" | ")} — ` +
+      `selectShadcnOption(${optionText}): no Select trigger matched ${candidates.join(" | ")}: ` +
         "pass triggerSelector for this app's trigger markup",
     );
   }
@@ -65,7 +65,7 @@ export async function selectShadcnOption(
   await page.getByRole("option", { name: optionText, exact: false }).first().click({ timeout });
 }
 
-/** Set a file input directly — works even when it is hidden behind a styled dropzone. */
+/** Set a file input directly: works even when it is hidden behind a styled dropzone. */
 export async function uploadFile(
   page: Page,
   absFilePath: string,
@@ -90,7 +90,7 @@ export type WaitForTerminalOptions = {
   deadlineMs?: number;
   /** How often `done` is polled. */
   pollMs?: number;
-  /** Called on each poll that did not finish — the usual use is a mid-wait screenshot. */
+  /** Called on each poll that did not finish: the usual use is a mid-wait screenshot. */
   onMidWait?: (elapsedMs: number) => Promise<void> | void;
   /** How often `onMidWait` fires, independent of the poll interval. */
   midWaitEveryMs?: number;
@@ -101,7 +101,7 @@ export type WaitForTerminalOptions = {
 /**
  * Poll until a run reaches a terminal state, capturing evidence along the way.
  *
- * Nearly every verification script hand-rolls this loop — a bounded wait, a
+ * Nearly every verification script hand-rolls this loop: a bounded wait, a
  * deadline, and a mid-wait screenshot so a run that never finishes still leaves
  * evidence of where it stalled. `done` is the only app-specific part.
  *
@@ -141,7 +141,7 @@ export async function waitForTerminal(
     const now = Date.now();
     if (now >= deadline) {
       const because =
-        lastError instanceof Error ? ` — last predicate error: ${lastError.message}` : "";
+        lastError instanceof Error ? `: last predicate error: ${lastError.message}` : "";
       throw new Error(
         `waitForTerminal(${label}): no terminal state after ${Math.round((now - startedAt) / 1000)}s${because}`,
       );
@@ -162,7 +162,7 @@ export async function waitForTerminal(
 }
 
 export type ShotOptions = {
-  /** Directory the PNG lands in — normally the app's gitignored `.local/verify/<lens>/`. */
+  /** Directory the PNG lands in: normally the app's gitignored `.local/verify/<lens>/`. */
   outDir: string;
   fullPage?: boolean;
   /** Cap a tall fullPage capture. A 1440x3600 screenshot costs real tokens to read back. */
@@ -219,7 +219,7 @@ export type Affordances = {
  * it out of the DOM is both cheaper and more precise than reading a screenshot
  * back into context and describing it.
  *
- * Text is trimmed and collapsed, and hidden elements are skipped — an invisible
+ * Text is trimmed and collapsed, and hidden elements are skipped: an invisible
  * control is not an affordance, and counting one is how a "the button is there"
  * claim ends up wrong.
  */
@@ -275,13 +275,13 @@ export async function affordances(page: Page): Promise<Affordances> {
 export type BusyState = {
   /** A spinner, progress bar, or aria-busy region is currently on screen. */
   busy: boolean;
-  /** Visible status/stage text, in DOM order — the strings a run reports progress with. */
+  /** Visible status/stage text, in DOM order: the strings a run reports progress with. */
   stages: string[];
   /** Text in an error/alert role, if any. */
   errors: string[];
   /** Any progress element's value as a 0-1 fraction, when the DOM exposes one. */
   progress: number | null;
-  /** Controls currently disabled — the usual "work in flight" tell on a form. */
+  /** Controls currently disabled: the usual "work in flight" tell on a form. */
   disabledControls: number;
 };
 
@@ -291,7 +291,7 @@ export type BusyState = {
  * This is the cheap answer to the question a verification pass asks most often:
  * "is it still working, and does it say so?". The expensive answer is taking a
  * screenshot and reading the image back, which costs image tokens on every
- * remaining turn of that agent's run — and a spinner is exactly the kind of
+ * remaining turn of that agent's run, and a spinner is exactly the kind of
  * thing the DOM states plainly.
  *
  * Deliberately app-agnostic: it keys on roles and ARIA (`status`, `alert`,
@@ -352,14 +352,14 @@ type MediaPaintResult = {
 };
 
 /**
- * Assert a media element actually PAINTS, not just that it exists in the DOM —
+ * Assert a media element actually PAINTS, not just that it exists in the DOM:
  * the recurring failure is a <video>/<img> output that renders blank, especially
  * in list/library/gallery surfaces. Call once per surface that shows the output
  * (the collection view AND the detail view).
  *
  *   <img>   -> naturalWidth > 0
  *   <video> -> paintable within the timeout, satisfied by ANY of:
- *                - readyState >= 2 (HAVE_CURRENT_DATA — a decoded frame), or a
+ *                - readyState >= 2 (HAVE_CURRENT_DATA: a decoded frame), or a
  *                  'loadeddata'/'canplay' event firing while we poll
  *                - videoWidth > 0 (first frame decoded; true even when the video
  *                  is paused with preload="none"|"metadata" and no poster)
@@ -453,10 +453,10 @@ export async function assertMediaPaints(
 
   if (!result.ok) {
     const suffix = result.timedOut
-      ? ` — timed out after ${timeout}ms waiting for a paintable frame`
+      ? `: timed out after ${timeout}ms waiting for a paintable frame`
       : "";
     throw new Error(
-      `assertMediaPaints(${selector}): media did not paint${suffix} — ${JSON.stringify(result)}`,
+      `assertMediaPaints(${selector}): media did not paint${suffix}: ${JSON.stringify(result)}`,
     );
   }
 

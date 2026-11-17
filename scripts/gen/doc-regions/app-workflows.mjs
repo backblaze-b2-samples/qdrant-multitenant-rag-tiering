@@ -2,9 +2,9 @@
  * The section skeleton of docs/app-workflows.md.
  *
  * Deliberately NOT marker-delimited. Every bullet in that file is behavioural
- * prose encoding a real UX decision — why a dialog is held open against the
+ * prose encoding a real UX decision (why a dialog is held open against the
  * primitive's default, why folders auto-expand until the majority of listed
- * items are reachable — and templating any of it would make each app's docs
+ * items are reachable), and templating any of it would make each app's docs
  * worse. What is mechanical is the *shape*: which journeys exist, in what
  * order, and where each one links. Wrapping eight marker lines around four
  * one-line footers to manage that would be worse than managing it directly.

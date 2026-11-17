@@ -1,10 +1,10 @@
 // Shared local-bind probe for scripts/doctor.mjs and scripts/pick-port.mjs.
 //
 // Four outcomes, and callers must keep them apart:
-//   free        — nothing is listening and we were allowed to bind
-//   busy        — EADDRINUSE: something already owns the port
-//   denied      — EACCES/EPERM: a sandbox forbids listening at all
-//   unsupported — the address family does not exist on this host (a `::`/`::1`
+//   free, nothing is listening and we were allowed to bind
+//   busy: EADDRINUSE: something already owns the port
+//   denied: EACCES/EPERM: a sandbox forbids listening at all
+//   unsupported: the address family does not exist on this host (a `::`/`::1`
 //                 probe inside an IPv6-disabled container), which is neither a
 //                 busy port nor a fault worth stopping for
 import { createServer } from "node:net";
@@ -13,7 +13,7 @@ const BIND_DENIED_CODES = new Set(["EACCES", "EPERM"]);
 
 // IPv6 is commonly absent in containers and CI sandboxes. Reporting these as
 // errors would fail `pnpm run doctor` (and therefore `pnpm dev` via predev) on a
-// host where the IPv4 bind — the one that actually matters — is fine.
+// host where the IPv4 bind (the one that actually matters) is fine.
 const BIND_UNSUPPORTED_CODES = new Set([
   "EAFNOSUPPORT",
   "EADDRNOTAVAIL",

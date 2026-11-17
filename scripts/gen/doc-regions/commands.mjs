@@ -1,15 +1,15 @@
 /**
  * The command index, declared once.
  *
- * Three surfaces have to name the same commands — AGENTS.md, README.md and
- * docs/dev-workflows.md — and `scripts/agent-docs/workflow.mjs` fails the
+ * Three surfaces have to name the same commands (AGENTS.md, README.md and
+ * docs/dev-workflows.md), and `scripts/agent-docs/workflow.mjs` fails the
  * build when one of them forgets. Two of those three are generated from this
  * list, so the duplication is mechanical rather than remembered.
  *
  * `script` must be a real key in package.json `scripts`; the generator checks.
  * `group` buckets the AGENTS.md fence. `readme` is the longer description the
  * README's table wants, and its presence is also what puts the command in
- * that table — the README lists the handful reached for daily, not all of them.
+ * that table: the README lists the handful reached for daily, not all of them.
  */
 export const COMMANDS = [
   {
@@ -41,7 +41,7 @@ export const COMMANDS = [
     group: "Run",
     short: "block until web + API answer, then exit (no sleep/curl polling)",
     readme:
-      "Block until the running web + API answer, print one line, exit 0/1 — use instead of sleeping before driving the app",
+      "Block until the running web + API answer, print one line, exit 0/1: use instead of sleeping before driving the app",
   },
   {
     script: "contract:export",
@@ -92,7 +92,7 @@ export const COMMANDS = [
     group: "Test & Lint",
     short: "credential-free canonical non-live pre-PR suite",
     readme:
-      "Credential-free pre-PR suite — runs `check:agent-docs`, `verify:api`, then `verify:web`",
+      "Credential-free pre-PR suite: runs `check:agent-docs`, `verify:api`, then `verify:web`",
   },
   {
     script: "verify:api",

@@ -16,7 +16,7 @@ interface LoadingNoticeProps {
 
 /**
  * On-screen (not `sr-only`) language for a wait that can take seconds, which
- * escalates the longer it runs — see `lib/loading-progress.ts` for the copy.
+ * escalates the longer it runs: see `lib/loading-progress.ts` for the copy.
  *
  * Mount it only while the wait is actually happening: the elapsed clock starts
  * when the component mounts.

@@ -12,7 +12,7 @@ type MediaState = "loading" | "ready" | "error";
  * Renders the preview media and owns its own load state.
  *
  * The preview-URL fetch finishing is NOT the same thing as the media being
- * painted — a large image can take seconds more, and the dialog used to drop
+ * painted: a large image can take seconds more, and the dialog used to drop
  * its skeleton at that first milestone and show an empty white pane that reads
  * as "no preview available". The skeleton therefore stays up until the
  * `load` event, and an `error` swaps in a real error state with an

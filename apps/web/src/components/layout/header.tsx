@@ -52,7 +52,7 @@ export function Header() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const nextTheme = resolvedTheme === "dark" ? "light" : "dark";
 
-  // Global keyboard shortcut — cmd/ctrl-K or `/` toggles the palette.
+  // Global keyboard shortcut: cmd/ctrl-K or `/` toggles the palette.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -133,7 +133,7 @@ export function Header() {
           </TooltipTrigger>
           <TooltipContent side="bottom">Toggle color theme</TooltipContent>
         </Tooltip>
-        {/* Placeholder avatar — swap for a real user chip when auth lands. */}
+        {/* Placeholder avatar: swap for a real user chip when auth lands. */}
         <div
           aria-hidden
           className="ml-1 h-7 w-7 rounded-full bg-[var(--primary)] ring-1 ring-white/20 relative overflow-hidden"

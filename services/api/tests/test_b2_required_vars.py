@@ -1,5 +1,5 @@
 """The B2 configuration contract in `app/config/b2_required_vars.json` is read
-by two languages — `app/config/settings.py` and `scripts/doctor.mjs` — so
+by two languages (`app/config/settings.py` and `scripts/doctor.mjs`) so
 nothing in Python can catch a typo in it. These tests do.
 
 Renaming a `Settings` field without renaming it in the JSON (or the reverse)

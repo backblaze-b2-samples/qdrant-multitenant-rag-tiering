@@ -62,10 +62,10 @@ export function FileBrowser() {
   const tree = useMemo(() => buildFileTree(files), [files]);
 
   // Auto-expand the first time data arrives, deep enough that actual file rows
-  // are on screen (see `initialExpandedPaths`) — expanding only the top level
+  // are on screen (see `initialExpandedPaths`): expanding only the top level
   // could leave the page showing four folder rows and zero files while telling
   // the user to click one. The guard on `prev.size > 0` makes this idempotent
-  // across refetches — once the user has toggled anything, their expansion
+  // across refetches: once the user has toggled anything, their expansion
   // state is preserved (a deliberate UX improvement over the pre-TanStack-Query
   // version, which clobbered expansion state on every refresh).
   useEffect(() => {
@@ -106,7 +106,7 @@ export function FileBrowser() {
 
   // Download had no in-app feedback at all: the presign round trip happened
   // inside a bare click handler, so a slow call left the screen unchanged for
-  // seconds and — once the click's user activation expired — `window.open` was
+  // seconds and (once the click's user activation expired) `window.open` was
   // silently dropped and nothing happened. Now the click is a mutation (pending
   // state on the row + a toast), and the navigation is an anchor click that
   // survives an expired activation.
@@ -276,7 +276,7 @@ export function FileBrowser() {
               // gone at ~239ms while the DELETE only returned at ~554ms, leaving
               // the row listed and indistinguishable from idle. Holding the
               // dialog open until the mutation settles makes the pending state
-              // real — it matters more the slower the network is.
+              // real: it matters more the slower the network is.
               onClick={(event) => {
                 event.preventDefault();
                 confirmDelete();

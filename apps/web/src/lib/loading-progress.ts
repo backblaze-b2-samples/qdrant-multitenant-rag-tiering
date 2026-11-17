@@ -4,7 +4,7 @@
  * A skeleton alone is a lie past a few seconds: `/files` and the dashboard both
  * need a full bucket listing, which measured 2.8s-21s on a 16k-object bucket.
  * The old UI put "Loading files..." in an `sr-only` paragraph, so a sighted user
- * saw six pulsing bars and nothing else — at 20s there was no way to tell "still
+ * saw six pulsing bars and nothing else: at 20s there was no way to tell "still
  * listing 16,000 objects" from "hung".
  *
  * Pure on purpose (a component owns the clock) so the thresholds and wording are
@@ -47,7 +47,7 @@ export function loadingCopy(elapsedMs: number, subject: string): LoadingCopy {
     case "slow":
       return {
         message: `Still loading ${subject}…`,
-        hint: "Listing every object in the bucket — this takes a few seconds on a large bucket.",
+        hint: "Listing every object in the bucket: this takes a few seconds on a large bucket.",
       };
     default:
       return { message: `Loading ${subject}…`, hint: null };

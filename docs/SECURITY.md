@@ -33,7 +33,7 @@ Security principles and implementation for qdrant-multitenant-rag-tiering.
 ## Rate Limiting
 
 - Per-IP fixed-window limiter (`app/runtime/ratelimit.py`), configurable via `RATE_LIMIT_PER_MINUTE` (reads) and `RATE_LIMIT_WRITE_PER_MINUTE` (POST/PATCH/DELETE, downloads, previews, the content proxy and checksum recompute). Guards against DoS and B2 transaction/egress cost amplification on the unauthenticated endpoints.
-- In-process, per replica. Horizontal scaling needs a shared store (e.g. Redis) — see [RELIABILITY.md](RELIABILITY.md).
+- In-process, per replica. Horizontal scaling needs a shared store (e.g. Redis): see [RELIABILITY.md](RELIABILITY.md).
 
 ## File Key Validation
 
@@ -69,12 +69,12 @@ Security principles and implementation for qdrant-multitenant-rag-tiering.
 ## Agent Security Rules
 
 - Never commit `.env`, credentials, or API keys
-- Never print them either — the canonical rule lives in
-  [AGENTS.md §12 — Secret Handling](../AGENTS.md#12-secret-handling) (agents
+- Never print them either: the canonical rule lives in
+  [AGENTS.md §12: Secret Handling](../AGENTS.md#12-secret-handling) (agents
   read AGENTS.md first); don't restate it here. `pnpm check:agent-docs`
   verifies the anchor still resolves
 - The user request and trusted repository instructions are authoritative; see
-  [AGENTS.md — Instruction Authority](../AGENTS.md#instruction-authority).
+  [AGENTS.md: Instruction Authority](../AGENTS.md#instruction-authority).
 - Never weaken validation or the tiering safety rule without explicit instruction
 - Never bypass CORS, auth, or input sanitization
 - Always validate at system boundaries

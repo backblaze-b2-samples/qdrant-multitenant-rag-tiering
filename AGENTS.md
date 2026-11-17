@@ -32,10 +32,10 @@ These pieces are shared scaffolding rather than app-specific code: keep them, an
 - This app removed the kit's `/upload` flow on purpose: documents arrive through tenant create/edit, and no presigned URL is ever handed to the browser (see §3).
 
 **Adapt to this app**
-- **Dashboard.** `/` route and `apps/web/src/components/dashboard/` show tiering metrics (hot/parked counts, vector memory in use and freed, bytes in B2). New aggregations must flow through the same `runtime -> service -> repo` layering and be exposed via TanStack Query hooks in `apps/web/src/lib/queries.ts` — no bare `useEffect + fetch`, and no hand-added `qk` entry: query keys come from `pnpm gen:api`.
+- **Dashboard.** `/` route and `apps/web/src/components/dashboard/` show tiering metrics (hot/parked counts, vector memory in use and freed, bytes in B2). New aggregations must flow through the same `runtime -> service -> repo` layering and be exposed via TanStack Query hooks in `apps/web/src/lib/queries.ts`, no bare `useEffect + fetch`, and no hand-added `qk` entry: query keys come from `pnpm gen:api`.
 - Update `docs/features/dashboard.md` in the same PR as any dashboard change (see §9).
 
-**Why this contract exists** — the UI kit and the bucket explorer are the reusable B2-backed scaffolding; stripping them costs the app its whole storage surface.
+**Why this contract exists**: the UI kit and the bucket explorer are the reusable B2-backed scaffolding; stripping them costs the app its whole storage surface.
 
 ## 3. Architectural Invariants
 
@@ -52,23 +52,23 @@ These pieces are shared scaffolding rather than app-specific code: keep them, an
 
 **B2 traffic**: every byte goes through the one boto3 client in `app/repo/b2_client.py` (custom user agent). No presigned URLs to the browser (preview/download use the `/files-by-key/content` proxy), no Qdrant "recover from URL", no bucket configuration applied by code, and every write stays under `RAG_PREFIX` (default `rag/`).
 
-**Frontend**: shadcn/ui components in `src/components/ui/` are generated — never modify them.
+**Frontend**: shadcn/ui components in `src/components/ui/` are generated, never modify them.
 
-**Data fetching**: every API call flows through TanStack Query hooks in `apps/web/src/lib/queries.ts`. No bare `useEffect + fetch` patterns. To add or change a frontend-consumed endpoint, edit only `runtime/<router>.py` and its Pydantic models, then run `pnpm contract:export && pnpm gen:api`. The route registry, the shared types and the query keys are GENERATED — never hand-edit `apps/web/src/lib/generated/**` or `packages/shared/src/generated/**`; `pnpm gen:check` fails if you do, and the next `pnpm gen:api` discards the edit.
+**Data fetching**: every API call flows through TanStack Query hooks in `apps/web/src/lib/queries.ts`. No bare `useEffect + fetch` patterns. To add or change a frontend-consumed endpoint, edit only `runtime/<router>.py` and its Pydantic models, then run `pnpm contract:export && pnpm gen:api`. The route registry, the shared types and the query keys are GENERATED, never hand-edit `apps/web/src/lib/generated/**` or `packages/shared/src/generated/**`; `pnpm gen:check` fails if you do, and the next `pnpm gen:api` discards the edit.
 
-**API contract**: *every* route change — including backend-only routes — re-exports `docs/api/openapi.json` (`pnpm contract:export`), or `pnpm test:api` fails. A backend-only route additionally goes in `serverOnly` in `scripts/gen/api-gen.config.json` (and its mirror in `apps/web/src/lib/api-contract.test.ts`), or `pnpm test:web` fails.
+**API contract**: *every* route change (including backend-only routes) re-exports `docs/api/openapi.json` (`pnpm contract:export`), or `pnpm test:api` fails. A backend-only route additionally goes in `serverOnly` in `scripts/gen/api-gen.config.json` (and its mirror in `apps/web/src/lib/api-contract.test.ts`), or `pnpm test:web` fails.
 
 ## 4. Quality Expectations
 
-- **DRY** — do not duplicate logic, types, or constants. Extract shared code only when used in 2+ places.
-- Structured JSON logging only — no `print()` statements
+- **DRY**: do not duplicate logic, types, or constants. Extract shared code only when used in 2+ places.
+- Structured JSON logging only, no `print()` statements
 - No raw SDK calls outside `repo/` layer
 - Authored Python files under `services/api/app/` stay under 300 lines
 - Tests added or updated for every behavior change
 - Docs updated in same PR as code changes
 - Lint clean before merge
 - Prefer boring, composable libraries over clever abstractions
-- No implicit type assumptions — use typed models
+- No implicit type assumptions: use typed models
 
 ## 5. Mechanical Enforcement
 
@@ -83,7 +83,7 @@ These pieces are shared scaffolding rather than app-specific code: keep them, an
 | Import ordering | `ruff` rule I001 |
 | Frontend strict equality | `eslint` rule eqeqeq |
 | No unused vars | `eslint` + `ruff` rules |
-| This file stays agent-sized (≥ 1 KB, ≤ 20 KB, ≤ 258 lines — 250 of prose plus the 8 region-marker lines) | `pnpm check:agent-docs` (budget: `scripts/agent-docs/limits.mjs`) |
+| This file stays agent-sized (≥ 1 KB, ≤ 20 KB, ≤ 258 lines: 250 of prose plus the 8 region-marker lines) | `pnpm check:agent-docs` (budget: `scripts/agent-docs/limits.mjs`) |
 | The generated API seam (`packages/shared/src/generated/`, `apps/web/src/lib/generated/`) matches `docs/api/openapi.json` | `pnpm gen:check` (`scripts/gen-api.mjs`) |
 | The generated doc regions match `docs/exec-plans/sample.json`, and every `gen:begin`/`gen:end` pair is intact | `pnpm gen:check` (`scripts/gen-docs.mjs`) |
 | Agent shims stay thin pointers to AGENTS.md (non-empty, ≤ 1 KB, ≤ 20 lines) | `pnpm check:agent-docs` |
@@ -97,14 +97,14 @@ These pieces are shared scaffolding rather than app-specific code: keep them, an
 | The required B2 variables are declared once, in `app/config/b2_required_vars.json`, and read by both `app/config/settings.py` and `scripts/doctor.mjs` | `tests/test_b2_required_vars.py` |
 | Env files ignored; example/template env files trackable | `pnpm check:agent-docs` |
 | Relative Markdown links resolve, and every `#anchor` matches a real heading | `pnpm check:agent-docs` (`scripts/agent-docs/doc-links.mjs`) |
-| If the README ships a Vercel deploy button, it deploys the whole app — a root `vercel.json` declaring `web` + `api` services (one project), or buttons covering both Projects — backed by `infra/vercel/README.md` | `pnpm check:agent-docs` |
-| FastAPI `API_TITLE`/description (and the OpenAPI artifact) derive from the frontend `APP_NAME` — one display name, not a copy that drifts on rebrand | `pnpm check:agent-docs` (`scripts/agent-docs/branding.mjs`) |
+| If the README ships a Vercel deploy button, it deploys the whole app (a root `vercel.json` declaring `web` + `api` services (one project), or buttons covering both Projects) backed by `infra/vercel/README.md` | `pnpm check:agent-docs` |
+| FastAPI `API_TITLE`/description (and the OpenAPI artifact) derive from the frontend `APP_NAME`: one display name, not a copy that drifts on rebrand | `pnpm check:agent-docs` (`scripts/agent-docs/branding.mjs`) |
 | The display name is not hardcoded in frontend source outside `app-config.ts` (components import `APP_NAME`) | `pnpm check:agent-docs` |
 | One B2 attribution token across `user_agent_extra` (custom user agent) and `utm_content` (Backblaze links) | `pnpm check:agent-docs` |
 
 `pnpm check:agent-docs` is CI-blocking (job `verify-agent-docs`) and the first
 gate inside `pnpm verify`. It asserts the *set* of verify gates, not a literal
-command chain — that literal lives only in `package.json`. The env-file rules
+command chain: that literal lives only in `package.json`. The env-file rules
 ask git which repo-tracked `.gitignore` matches each path, so a path (or, with
 no git work tree, the whole group) that git cannot answer for is reported as
 `SKIPPED` instead of passing or failing; see
@@ -159,7 +159,7 @@ then `pnpm verify:api` (backend lint, backend tests, structural boundary tests),
 then `pnpm verify:web` (generator drift, frontend lint, unit tests, typecheck +
 build). CI (`.github/workflows/ci.yml`) runs those three as parallel jobs on
 every PR and push to `main`. Use `pnpm verify:full` locally when browser/E2E and
-live-service prerequisites are available — see
+live-service prerequisites are available: see
 [docs/verification.md](docs/verification.md#non-live-verification) for the list.
 The primary feature's end-to-end proof is `pnpm test:e2e:tiering` (Docker plus
 real B2 credentials; parks through the policy, restores on a fresh Qdrant node).

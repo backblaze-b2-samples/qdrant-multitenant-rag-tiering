@@ -11,8 +11,8 @@ first-query-after-restore and post-restore latency, and memory freed, per tenant
 - API: `POST /reports`, `GET /reports`, `GET /reports/{run_id}`
 
 ## Core Functions
-- `app/service/reports.py` — `run_benchmark`, `probe_queries`, `latency_stats`, `results_match`, `write_report`
-- `apps/web/src/lib/report-chart.ts` — chart data shaping (latency, memory, restore penalty)
+- `app/service/reports.py`: `run_benchmark`, `probe_queries`, `latency_stats`, `results_match`, `write_report`
+- `apps/web/src/lib/report-chart.ts`: chart data shaping (latency, memory, restore penalty)
 
 ## Canonical Files
 - Pattern exemplar: `services/api/app/service/reports.py`

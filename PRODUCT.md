@@ -30,7 +30,7 @@ and no SLA is provided for the repository software.
 
 Confident, precise, quietly professional. Voice is direct and free of hype ("Keep
 vector memory for the tenants who query; park the rest in B2"). The interface should
-feel like an operator's tool — considered, calm, trustworthy — and always say where a
+feel like an operator's tool (considered, calm, trustworthy) and always say where a
 tenant lives (hot, parked, empty) and what an action will cost before it runs.
 
 ## Anti-references
@@ -56,7 +56,7 @@ tenant lives (hot, parked, empty) and what an action will cost before it runs.
 - **Earned familiarity over novelty.** Use standard, trusted affordances (top bar +
   side nav, command palette, data tables). The tool disappears into the task.
 - **Every state is designed.** Default, hover, focus, active, disabled, loading (skeleton),
-  empty (teaches the interface), and error (says what's wrong + offers retry) — never
+  empty (teaches the interface), and error (says what's wrong + offers retry), never
   half-shipped.
 - **Consistency is the feature.** One button vocabulary, one form-control set, one icon
   style across every screen. Divergence is a bug.

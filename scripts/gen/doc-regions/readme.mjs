@@ -2,11 +2,11 @@
  * Generated regions of README.md.
  *
  * Small on purpose. The README is the one document that gets rewritten
- * wholesale rather than edited, and a marker pair only survives an edit — so
+ * wholesale rather than edited, and a marker pair only survives an edit, so
  * the generated surface is kept to the parts that are pure transcription of
  * the manifest (identity, screenshots, credential names, the command table,
- * the deploy-button URL, the documentation map). Every argued section — quick
- * start, when to use / when not to use, why this storage, the FAQ — is
+ * the deploy-button URL, the documentation map). Every argued section (quick
+ * start, when to use / when not to use, why this storage, the FAQ) is
  * hand-written and never touched.
  */
 import { commandTable } from "./commands.mjs";
@@ -28,9 +28,9 @@ function header(ctx) {
     "",
     "**What you get out of the box:**",
     `- Full-stack dashboard UI (${ctx.stack.web})`,
-    ...ctx.features.map((feature) => `- ${feature.title} — ${feature.summary}`),
+    ...ctx.features.map((feature) => `- ${feature.title}: ${feature.summary}`),
     `- Backend with a strict layered architecture and structural tests (${ctx.stack.api})`,
-    "- Agent-optimized docs — your AI coding agent can read the repo and start contributing immediately",
+    "- Agent-optimized docs: your AI coding agent can read the repo and start contributing immediately",
   ].join("\n");
 }
 
@@ -68,7 +68,7 @@ function credentials(ctx) {
     "1. **Create a bucket** and an **application key** with `Read and Write`",
     "   permission, then paste each value into `.env`:",
     ...ctx.requiredVars.map(
-      (variable) => `   - \`${variable.name}\` — ${variable.note}`,
+      (variable) => `   - \`${variable.name}\`: ${variable.note}`,
     ),
     "",
     "   B2 shows an application key once, at creation. The optional variables are",
@@ -78,7 +78,7 @@ function credentials(ctx) {
 
 function coreFeatures(ctx) {
   return ctx.features
-    .map((feature) => `- [${feature.title}](${feature.doc}) — ${feature.summary}`)
+    .map((feature) => `- [${feature.title}](${feature.doc}): ${feature.summary}`)
     .join("\n");
 }
 
@@ -121,7 +121,7 @@ function deployButton(ctx) {
 }
 
 const DOC_MAP_ROWS = [
-  ["[AGENTS.md](AGENTS.md)", "Agent table of contents — start here"],
+  ["[AGENTS.md](AGENTS.md)", "Agent table of contents: start here"],
   ["[ARCHITECTURE.md](ARCHITECTURE.md)", "System layout, layering, data flows"],
   ["[docs/design-system.md](docs/design-system.md)", "Design tokens, primitives, loader, error/empty states"],
   ["[docs/app-workflows.md](docs/app-workflows.md)", "User journeys"],

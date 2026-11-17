@@ -200,7 +200,7 @@ export function checkGateClaims(packageJsonText, ciText, docSurfaces) {
       return;
     }
 
-    failures.push(`${message} — ${detail}`);
+    failures.push(`${message}: ${detail}`);
   };
 
   if (packageJsonText) {
@@ -209,7 +209,7 @@ export function checkGateClaims(packageJsonText, ciText, docSurfaces) {
       passes.push("package.json is valid JSON");
     } catch (error) {
       failures.push(
-        `package.json is valid JSON — parse failed: ${error.message}`,
+        `package.json is valid JSON: parse failed: ${error.message}`,
       );
     }
   }

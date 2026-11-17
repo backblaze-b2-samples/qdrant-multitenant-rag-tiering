@@ -9,7 +9,7 @@
  * Output: marker-delimited regions inside ARCHITECTURE.md, AGENTS.md,
  * README.md and the `infra/` runbooks, plus the section skeleton of
  * `docs/app-workflows.md`. Everything OUTSIDE a marker pair is hand-written
- * and never touched — the generators own the busywork, not the prose.
+ * and never touched: the generators own the busywork, not the prose.
  *
  * Zero dependencies (node: builtins only), offline, and idempotent: running it
  * twice on the same manifest produces byte-identical files.
@@ -207,7 +207,7 @@ function manifestFromFlags(argv) {
  * Minimal structural validation driven by the JSON Schema itself, so the
  * schema file and the generator cannot disagree about what is required. Not a
  * full validator: it checks presence, top-level types, enums, and the required
- * keys of array items — which is what stops the generator emitting garbage.
+ * keys of array items, which is what stops the generator emitting garbage.
  */
 function validate(manifest, schema) {
   const problems = [];
@@ -255,7 +255,7 @@ function validate(manifest, schema) {
   for (const key of schema.required) {
     if (manifest[key] === undefined) {
       problems.push(
-        `missing required field "${key}" — add it to the manifest, or pass the matching flag (see \`node scripts/gen-docs.mjs --help\`)`,
+        `missing required field "${key}": add it to the manifest, or pass the matching flag (see \`node scripts/gen-docs.mjs --help\`)`,
       );
     }
   }
@@ -358,7 +358,7 @@ function checkIdentity(manifest) {
 
 /**
  * @returns {{text: string, changed: boolean}}
- * @throws never — a structural problem exits the process with a named error.
+ * @throws never: a structural problem exits the process with a named error.
  */
 function applyRegions(relativePath, regions, context) {
   const absolute = repoPath(relativePath);
@@ -381,7 +381,7 @@ function applyRegions(relativePath, regions, context) {
       if (open) {
         fail(
           `${relativePath}: region "${begin[1]}" opens inside "${open}". Generated ` +
-            `regions cannot nest — restore the markers (\`git checkout -- ${relativePath}\`) and re-run.`,
+            `regions cannot nest: restore the markers (\`git checkout -- ${relativePath}\`) and re-run.`,
         );
       }
 
@@ -433,7 +433,7 @@ function applyRegions(relativePath, regions, context) {
   if (missing.length > 0) {
     fail(
       `${relativePath} has lost ${missing.length} generated region(s): ${missing.join(", ")}. ` +
-        `A whole-file rewrite is the usual cause. This is never repaired silently — put the ` +
+        `A whole-file rewrite is the usual cause. This is never repaired silently: put the ` +
         `\`<!-- gen:begin … -->\` / \`<!-- gen:end … -->\` pair back where it belongs ` +
         `(\`git checkout -- ${relativePath}\` restores it) and re-run \`pnpm gen:docs\`.`,
     );
@@ -455,7 +455,7 @@ function guardSize(relativePath, text) {
       `refusing to write ${relativePath}: it would be ${lines} lines / ${bytes} bytes, ` +
         `over the ${AGENTS_LIMITS.maxLines}-line / ${AGENTS_LIMITS.maxBytes}-byte budget ` +
         `\`pnpm check:agent-docs\` enforces. Shorten the hand-written prose, or raise the ` +
-        `limit deliberately in scripts/check-agent-docs.mjs AND here — but do not drop a region.`,
+        `limit deliberately in scripts/check-agent-docs.mjs AND here, but do not drop a region.`,
     );
   }
 }
@@ -471,7 +471,7 @@ function loadManifest(argv) {
     try {
       return JSON.parse(readFileSync(repoPath(path), "utf8"));
     } catch (error) {
-      fail(`${path} is not valid JSON — ${error.message}`);
+      fail(`${path} is not valid JSON: ${error.message}`);
     }
   }
 
@@ -528,7 +528,7 @@ function main() {
 
   // Render and validate EVERY file before writing any of them. A generator
   // that wrote as it went would leave the tree half-updated when a later file
-  // failed its size guard — which is the kind of quiet mess this whole change
+  // failed its size guard, which is the kind of quiet mess this whole change
   // exists to remove.
   const modules = modulesFor(manifest);
   const plan = modules.map((module) => {

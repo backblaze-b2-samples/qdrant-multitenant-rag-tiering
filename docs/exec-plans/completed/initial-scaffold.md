@@ -369,7 +369,7 @@ This file is written before `pnpm gen:docs` runs, because the generator reads it
 | `Vibe Coding Starter Kit` (`APP_NAME`, `API_TITLE`, `API_DESCRIPTION`, branding check, openapi title) | `Qdrant Multitenant RAG Tiering` |
 | `vibe_coding_starter_kit` (any snake case) | `qdrant_multitenant_rag_tiering` |
 | `user_agent_extra="b2ai-oss-start"` | `user_agent_extra="b2ai-qdrant-multitenant-rag-tiering"` |
-| `utm_content=b2ai-oss-start` (README, sidebar, doctor) | `utm_content=b2ai-qdrant-multitenant-rag-tiering` |
+| the starter-kit `utm_content` value (README, sidebar, doctor) | `utm_content=b2ai-qdrant-multitenant-rag-tiering` |
 | Compose image tags / service names | `qdrant-multitenant-rag-tiering-api`, `qdrant-multitenant-rag-tiering-web` |
 | CI workflow name | `qdrant-multitenant-rag-tiering CI` |
 | `.env.example` | keeps the four required `B2_*` names, `B2_PUBLIC_URL_BASE` commented, adds the optional vars commented with their defaults |

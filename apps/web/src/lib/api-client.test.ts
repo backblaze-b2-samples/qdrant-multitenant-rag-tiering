@@ -205,7 +205,7 @@ describe("getFileDetail", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("does not fall back on 404 — it surfaces the error in one request", async () => {
+  it("does not fall back on 404: it surfaces the error in one request", async () => {
     fetchMock.mockResolvedValueOnce(errorResponse(404, "Not Found"));
 
     await expect(getFileDetail("uploads/gone.png")).rejects.toMatchObject({

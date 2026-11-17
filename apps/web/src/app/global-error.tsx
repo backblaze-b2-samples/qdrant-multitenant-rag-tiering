@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Global error boundary — catches errors in root layout itself.
+ * Global error boundary: catches errors in root layout itself.
  * Must render its own <html>/<body> since the root layout may have failed.
  */
 export default function GlobalError({

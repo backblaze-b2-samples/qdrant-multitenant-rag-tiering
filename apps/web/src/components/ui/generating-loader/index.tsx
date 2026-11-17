@@ -4,15 +4,15 @@ import { cn } from "@/lib/utils";
 import "./styles.css";
 
 // Shared "something is generating" indicator. Composition:
-//   perimeter — a perforated ring of gray dots rotating slowly (always),
-//   center    — varies by `variant`:
-//     "flames" (default) — vertical scanlines in mixed reds/ambers/
+//   perimeter: a perforated ring of gray dots rotating slowly (always),
+//   center: varies by `variant`:
+//     "flames" (default): vertical scanlines in mixed reds/ambers/
 //                          yellows + flame-gradient lines, rising,
-//     "stars"            — a few AI sparkles (4-point stars) in amber,
+//     "stars": a few AI sparkles (4-point stars) in amber,
 //                          yellow, and white that pop in, rotate, and
 //                          vanish at staggered interior positions.
 // At sm size the center is always a single continuously-rotating
-// sparkle (regardless of variant) — the scanline / sparkle-field
+// sparkle (regardless of variant): the scanline / sparkle-field
 // compositions don't read at 16px, but an empty center looks broken.
 interface GeneratingLoaderProps {
   size?: "sm" | "md" | "lg";
@@ -95,7 +95,7 @@ interface Sparkle {
   color: SparkleColor;
 }
 
-// Sparkles for the "stars" variant — sit inside the orb. One "hero"
+// Sparkles for the "stars" variant: sit inside the orb. One "hero"
 // sparkle is sized to ~1/5 of the orb diameter so the composition has
 // a clear focal point; the others vary smaller.
 const SPARKLES_MD: Sparkle[] = [
@@ -111,7 +111,7 @@ const SPARKLES_LG: Sparkle[] = [
   { top: "70%", left: "68%", size: 7,  dur: "1.7s", delay: "-0.4s", color: "white"  },
 ];
 
-// Four-pointed AI sparkle ✦ — symmetric, reads as a single bright glint.
+// Four-pointed AI sparkle ✦: symmetric, reads as a single bright glint.
 function SparkleSvg({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden>
@@ -144,7 +144,7 @@ export function GeneratingLoader({
     ? []
     : size === "lg" ? SPARKLES_LG : SPARKLES_MD;
 
-  // Gentle linear opacity ramp across the perforated ring — enough to make
+  // Gentle linear opacity ramp across the perforated ring: enough to make
   // rotation perceptible without making it feel like a comet.
   const dotOpacity = (i: number) => 0.25 + 0.4 * (1 - i / dim.dots);
 
@@ -156,7 +156,7 @@ export function GeneratingLoader({
       aria-label={label ?? "Generating"}
     >
       <div className={cn("relative", dim.box)}>
-        {/* "flames" variant — scanlines clipped to the orb circle. */}
+        {/* "flames" variant: scanlines clipped to the orb circle. */}
         {scanlines.length > 0 && (
           <div
             className="absolute inset-0 rounded-full overflow-hidden"
@@ -183,7 +183,7 @@ export function GeneratingLoader({
           </div>
         )}
 
-        {/* "stars" variant — interior AI sparkles popping in/out. */}
+        {/* "stars" variant: interior AI sparkles popping in/out. */}
         {sparkles.map((s, i) => (
           <span
             key={i}
@@ -202,7 +202,7 @@ export function GeneratingLoader({
           </span>
         ))}
 
-        {/* sm — single continuously-rotating sparkle in the center. */}
+        {/* sm: single continuously-rotating sparkle in the center. */}
         {showCenterSparkle && (
           <span
             className="blaze-sparkle-pos"
@@ -218,7 +218,7 @@ export function GeneratingLoader({
           </span>
         )}
 
-        {/* Perimeter — perforated rotating dot ring. */}
+        {/* Perimeter: perforated rotating dot ring. */}
         <div
           className="absolute inset-0 blaze-sweep"
           style={{

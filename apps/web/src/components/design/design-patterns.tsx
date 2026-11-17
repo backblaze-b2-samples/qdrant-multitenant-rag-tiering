@@ -12,8 +12,8 @@ import { ApiError } from "@/lib/api-client";
 import { Section } from "./section";
 
 // Demo errors for the ErrorState showcase. These are constructed, not
-// thrown — `ErrorState` reads `status` to derive the right copy.
-const offlineError = new ApiError("Network error — check your connection", 0);
+// thrown: `ErrorState` reads `status` to derive the right copy.
+const offlineError = new ApiError("Network error: check your connection", 0);
 const serverError = new ApiError("Internal Server Error", 500);
 
 type Row = { name: string; size: string; type: string };
@@ -70,7 +70,7 @@ export function DesignPatterns() {
     <Section
       id="patterns"
       title="Patterns"
-      description="Composed building blocks — empty states, sortable tables, page headers."
+      description="Composed building blocks: empty states, sortable tables, page headers."
     >
       <div className="grid gap-4">
         <Card>
@@ -94,7 +94,7 @@ export function DesignPatterns() {
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="border-b border-border py-4 px-5">
-              <CardTitle className="card-title">Error state — offline</CardTitle>
+              <CardTitle className="card-title">Error state: offline</CardTitle>
             </CardHeader>
             <CardContent className="p-5">
               <ErrorState error={offlineError} onRetry={() => {}} />
@@ -103,7 +103,7 @@ export function DesignPatterns() {
 
           <Card>
             <CardHeader className="border-b border-border py-4 px-5">
-              <CardTitle className="card-title">Error state — backend 5xx</CardTitle>
+              <CardTitle className="card-title">Error state: backend 5xx</CardTitle>
             </CardHeader>
             <CardContent className="p-5">
               <ErrorState error={serverError} onRetry={() => {}} />

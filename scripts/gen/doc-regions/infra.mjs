@@ -2,8 +2,8 @@
  * Generated regions of the `infra/*` delivery runbooks.
  *
  * These two documents are frozen, kit-owned runbooks: roughly nine tenths of
- * each is platform behaviour that is identical in every clone — topology,
- * build gates, promotion and rollback, the human-approval rules — and
+ * each is platform behaviour that is identical in every clone (topology,
+ * build gates, promotion and rollback, the human-approval rules), and
  * rewriting that per app is pure waste. So only the few app-shaped parts are
  * generated: the service/topology tables, the variable tables (which the
  * manifest's `secret` flag splits), the bucket-CORS command, and the
@@ -18,7 +18,7 @@ const PLATFORM_VARS = {
       "API",
       "`MAX_FILE_SIZE`",
       "Optional configuration",
-      "Uploads go directly to B2 (presigned PUT), so the platform's Function payload limit no longer applies — leave at the default or set your own cap.",
+      "Uploads go directly to B2 (presigned PUT), so the platform's Function payload limit no longer applies: leave at the default or set your own cap.",
     ],
     [
       "API",
@@ -131,7 +131,7 @@ function vercelDeployButton(ctx) {
   }
 
   const lines = [
-    table(["`root-directory`", "Pre-filled `env`"], [["_(none — repo root)_", envList]]),
+    table(["`root-directory`", "Pre-filled `env`"], [["_(none: repo root)_", envList]]),
     "",
     "Alongside `repository-url` and the `env` list, the button carries the",
     "presentation parameters the clone flow renders in its preview card:",

@@ -10,7 +10,7 @@ interface EmptyStateProps {
 }
 
 /**
- * Empty state — use in place of ad-hoc centered paragraphs
+ * Empty state: use in place of ad-hoc centered paragraphs
  * when a list, table, or section has no content to display.
  */
 export function EmptyState({

@@ -27,7 +27,7 @@
 ## UI evidence
 
 <!-- Add screenshots or screen recordings for UI changes. Write "N/A - no UI changes" when not relevant.
-     Redact credentials, `.env` contents, and API keys before attaching anything — screenshots are a leak
+     Redact credentials, `.env` contents, and API keys before attaching anything: screenshots are a leak
      surface (AGENTS.md section 12). -->
 
 ## Docs

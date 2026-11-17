@@ -16,7 +16,7 @@ export function checkInstructionTrustBoundary(markdown) {
     if (ok) {
       passes.push(message);
     } else {
-      failures.push(`${message} — ${detail}`);
+      failures.push(`${message}: ${detail}`);
     }
   };
 

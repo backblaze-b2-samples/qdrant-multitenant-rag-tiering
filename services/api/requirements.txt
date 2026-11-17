@@ -1,4 +1,4 @@
-# Human-edited inputs — lower-bound (`>=`) pins, with an upper bound where a
+# Human-edited inputs: lower-bound (`>=`) pins, with an upper bound where a
 # window matters; a regression test enforces the lower-bound form
 # (tests/test_dependency_lock.py). The exact resolution lives in
 # requirements.lock (used by setup, CI and the Docker image); regenerate it per

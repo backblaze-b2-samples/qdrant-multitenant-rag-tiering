@@ -19,7 +19,7 @@ class FileMetadata(ResponseModel):
         default=None,
         description=(
             "Public object URL, set only when B2_PUBLIC_URL_BASE is configured "
-            "and the bucket is public. Null otherwise — the UI asks the API "
+            "and the bucket is public. Null otherwise: the UI asks the API "
             "for a proxied content URL instead."
         ),
     )

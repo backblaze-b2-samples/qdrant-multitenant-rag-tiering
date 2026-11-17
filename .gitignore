@@ -49,7 +49,7 @@ test-results/
 
 # Throwaway, app-specific verification specs. A verification pass writes these
 # into the workspace so they run under playwright.config.ts (real browser
-# resolution, real webServer readiness) instead of as standalone scripts — but
+# resolution, real webServer readiness) instead of as standalone scripts, but
 # they are scratch evidence for one run, never part of the app. Ignored so a
 # `git add -A` in the app's own repo cannot sweep one into a commit.
 apps/web/e2e/verify/
@@ -58,7 +58,7 @@ apps/web/e2e/verify/
 .aws/
 
 # Local runtime data (download counter, etc.). Deliberately at the repo root and
-# NOT under services/api/ — that directory is what `uvicorn --reload` watches, so
+# NOT under services/api/: that directory is what `uvicorn --reload` watches, so
 # runtime writes there make the dev reloader report changes on every download.
 .data/
 # Legacy location, still ignored for clones that already have it.

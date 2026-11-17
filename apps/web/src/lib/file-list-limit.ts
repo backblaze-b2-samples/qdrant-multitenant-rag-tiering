@@ -3,7 +3,7 @@
  *
  * `GET /files` returns the newest `limit` objects (default 100) with no
  * pagination. A bucket with thousands of objects therefore shows a small recent
- * slice — the browser used to present that slice as "everything in your
+ * slice: the browser used to present that slice as "everything in your
  * bucket", so an older file was unreachable AND unacknowledged. Pagination is
  * still open tech debt; until then the UI states the truncation.
  */

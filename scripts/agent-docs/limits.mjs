@@ -12,7 +12,7 @@
  * lines of `gen:begin` / `gen:end` marker comments, which a reader skips
  * entirely. Counting structural markers against a readability budget measures
  * the wrong thing, so the cap is the original 250 plus exactly that overhead.
- * Raise it again only for the same reason — a new generated region — and never
+ * Raise it again only for the same reason (a new generated region) and never
  * to make room for more prose.
  */
 export const AGENT_DOC_LIMITS = {

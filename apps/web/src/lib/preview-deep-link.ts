@@ -3,7 +3,7 @@
  *
  * Picking a file in the ⌘K palette used to `router.push("/files")` and nothing
  * more: on an 18,000-object bucket the chosen file was usually inside a
- * collapsed folder — and if the user was already on `/files`, the click produced
+ * collapsed folder, and if the user was already on `/files`, the click produced
  * no visible change at all, so the app's only search surface looked broken. The
  * dashboard's "Recent Uploads" rows had the same dead-end (inert text, while
  * `/files` teaches "Click a file to preview it").

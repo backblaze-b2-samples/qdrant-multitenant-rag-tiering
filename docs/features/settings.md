@@ -11,10 +11,10 @@ a theme. The policy is server configuration, so it is read-only here.
 - Storage: `next-themes`' own key for the theme. No server-side preferences store
 
 ## Core Functions
-- `apps/web/src/components/settings/settings-form.tsx` — read-only policy card plus the theme form
-- `apps/web/src/lib/settings-schema.ts` — zod schema (theme only), unit-tested in `settings-schema.test.ts`
-- `apps/web/src/lib/theme-preference.ts` — `THEME_OPTIONS`, `DEFAULT_THEME`, `normalizeTheme()`
-- `services/api/app/service/tiering.py` — `get_policy()`
+- `apps/web/src/components/settings/settings-form.tsx`: read-only policy card plus the theme form
+- `apps/web/src/lib/settings-schema.ts`: zod schema (theme only), unit-tested in `settings-schema.test.ts`
+- `apps/web/src/lib/theme-preference.ts`: `THEME_OPTIONS`, `DEFAULT_THEME`, `normalizeTheme()`
+- `services/api/app/service/tiering.py`: `get_policy()`
 
 ## Canonical Files
 - Pattern exemplar (selector for finite options, description hints): `apps/web/src/components/settings/settings-form.tsx`

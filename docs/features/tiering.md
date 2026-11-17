@@ -14,10 +14,10 @@ threshold is parked as a verified Qdrant snapshot in B2 and dropped from the nod
   (300 by default, `0` disables it)
 
 ## Core Functions
-- `app/service/tiering.py` — `select_candidates`, `park_locked` (the state machine), `run_policy`, `sweep_forever`, stats
-- `app/repo/snapshot_store.py` — `upload_stream` (multipart + running sha256), `put_manifest`, `verify_snapshot`
-- `app/repo/qdrant_gateway.py` — `create_snapshot`, `iter_snapshot` (streamed GET), `delete_snapshot`, `memory_bytes`
-- `app/service/prune.py` — keep-last pruning that never touches the manifest's target
+- `app/service/tiering.py`: `select_candidates`, `park_locked` (the state machine), `run_policy`, `sweep_forever`, stats
+- `app/repo/snapshot_store.py`: `upload_stream` (multipart + running sha256), `put_manifest`, `verify_snapshot`
+- `app/repo/qdrant_gateway.py`: `create_snapshot`, `iter_snapshot` (streamed GET), `delete_snapshot`, `memory_bytes`
+- `app/service/prune.py`: keep-last pruning that never touches the manifest's target
 
 ## Canonical Files
 - Pattern exemplar: `services/api/app/service/tiering.py`

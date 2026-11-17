@@ -1,16 +1,16 @@
 /* --- Generating loader ("blaze pulse") ---
    Center: a flame field built from many vertical scanlines in mixed
    colors (red, amber, yellow, and flame-gradient lines that fade
-   through the palette as they rise) — or, in the "stars" variant, a
+   through the palette as they rise), or, in the "stars" variant, a
    few AI sparkles (4-point stars) that pop in, rotate, and vanish at
    staggered interior positions. Around: a perforated rotating dot
    ring at the perimeter. See ./index.tsx.
 
    Host CSS variables this loader depends on (defined by the host
-   app's theme — Tailwind v4 / shadcn-style globals.css):
-     --muted-foreground   — perforated ring dot color
-     --foreground         — label sweep color
-     --background         — scrim background
+   app's theme: Tailwind v4 / shadcn-style globals.css):
+     --muted-foreground: perforated ring dot color
+     --foreground: label sweep color
+     --background: scrim background
    The blaze-* palette (red/orange/amber/yellow) is self-contained
    below and scoped to .blaze-orb. */
 
@@ -21,7 +21,7 @@
   --blaze-yellow: #facc15;
 }
 
-/* Rising scanlines — vertical lift with subtle horizontal jitter; the
+/* Rising scanlines: vertical lift with subtle horizontal jitter; the
    per-line max opacity --scan-o multiplies through every keyframe so
    lighter (yellow/amber) lines stay quieter than the red core line. */
 @keyframes blaze-rise {
@@ -38,7 +38,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* AI sparkle — pop in, scale + rotate, vanish. */
+/* AI sparkle: pop in, scale + rotate, vanish. */
 @keyframes blaze-sparkle {
   0%, 100% { opacity: 0; transform: rotate(0deg)   scale(0); }
   20%      { opacity: 0.5; }
@@ -46,7 +46,7 @@
   80%      { opacity: 0.4; }
 }
 
-/* Continuous spinning sparkle — used at sm size (button context). */
+/* Continuous spinning sparkle: used at sm size (button context). */
 @keyframes blaze-sparkle-spin {
   0%   { transform: rotate(0deg)   scale(0.85); opacity: 0.75; }
   50%  { transform: rotate(180deg) scale(1);    opacity: 1; }
@@ -58,14 +58,14 @@
   100% { background-position: 200% 50%; }
 }
 
-/* Vertical scan line — color comes from --scan-color (red/amber/yellow).
+/* Vertical scan line: color comes from --scan-color (red/amber/yellow).
    The .flame variant overrides background with a vertical multi-stop
    gradient that fades through red → orange → amber → yellow → transparent,
    so the line itself reads as a tiny flame as it rises. */
 .blaze-scanline {
   position: absolute;
   bottom: 0;
-  /* Use absolute pixel offset relative to parent center — translate %
+  /* Use absolute pixel offset relative to parent center: translate %
      on a 1px element resolves to fractions of a pixel (broken). */
   left: calc(50% + var(--scan-x, 0px));
   width: 1px;
@@ -95,7 +95,7 @@
   );
 }
 
-/* Perforated dot ring — many tightly-spaced gray dots around the orb's
+/* Perforated dot ring: many tightly-spaced gray dots around the orb's
    perimeter that rotate together. Per-dot opacity is a gentle ramp so
    motion is perceptible but the ring still reads as a perforation, not
    a comet. */
@@ -117,7 +117,7 @@
     translateY(calc(-1 * var(--orbit-r, 22px)));
 }
 
-/* AI sparkle — outer span centers the SVG on its top/left anchor; inner
+/* AI sparkle: outer span centers the SVG on its top/left anchor; inner
    SVG runs the rotate/scale animation around its own center. */
 .blaze-sparkle-pos {
   position: absolute;
@@ -150,7 +150,7 @@
   animation: blaze-sparkle-spin var(--sparkle-dur, 1.5s) linear infinite;
 }
 
-/* Shimmer label — sweep tinted with brand red, only when label is set. */
+/* Shimmer label: sweep tinted with brand red, only when label is set. */
 .blaze-label {
   background: linear-gradient(
     90deg,

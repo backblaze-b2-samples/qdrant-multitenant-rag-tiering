@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ApiError, API_BASE } from "@/lib/api-client";
 
 interface ErrorStateProps {
-  /** The thrown error — typically an ApiError. Used to derive sensible
+  /** The thrown error: typically an ApiError. Used to derive sensible
    *  default copy when title/description aren't provided. */
   error?: unknown;
   /** Override the auto-derived title. */
@@ -26,7 +26,7 @@ interface DerivedCopy {
 }
 
 // Map common error shapes to user-readable copy. The goal is to tell
-// the user *what's wrong* and *what to do next* — never just "an error
+// the user *what's wrong* and *what to do next*, never just "an error
 // occurred." Network failures (status 0) are the most common during
 // local dev and get the most actionable hint.
 function deriveCopy(error: unknown): DerivedCopy {
@@ -78,7 +78,7 @@ function deriveCopy(error: unknown): DerivedCopy {
 }
 
 /**
- * Failure-state primitive — the persistent counterpart to `EmptyState`.
+ * Failure-state primitive: the persistent counterpart to `EmptyState`.
  * Use whenever a fetch fails and showing stale or empty UI would mislead
  * the user into thinking the underlying state is "no data" rather than
  * "couldn't load the data."

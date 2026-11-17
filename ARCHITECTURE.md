@@ -6,20 +6,20 @@
 <!-- gen:begin arch-components -->
 A multi-tenant RAG service that serves hot tenants from Qdrant, parks idle tenants' collections as verified snapshots in Backblaze B2, restores them on the next query, and measures what that costs in latency and saves in memory.
 
-- **apps/web/** — Next.js 16, React 19, Tailwind v4, shadcn/ui, TanStack Query, Recharts
-  - Tenants (`/tenants`) — create tenants from text or Markdown files (or seed demo tenants), one Qdrant collection each, corpus in B2
-  - Tiering (`/tenants`) — idle policy and manual park: snapshot, multipart upload to B2, manifest last, verify, then drop
-  - Latency report (`/reports`) — benchmark warm, restore and post-restore latency plus memory freed, stored as report.json in B2
-  - Library (`/library`) — the app's own objects under rag/, grouped by tenant and kind
-  - Bucket explorer (`/files`) — full-bucket browse, preview, download and delete, streamed through the API
-  - Dashboard (`/`) — hot, parked and empty counts, vector memory in use and freed, bytes in B2, recent reports
-  - Settings (`/settings`) — read-only tiering policy and the browser theme
-- **services/api/** — FastAPI, Python 3.12, boto3, qdrant-client, fastembed, Pydantic v2
+- **apps/web/**: Next.js 16, React 19, Tailwind v4, shadcn/ui, TanStack Query, Recharts
+  - Tenants (`/tenants`): create tenants from text or Markdown files (or seed demo tenants), one Qdrant collection each, corpus in B2
+  - Tiering (`/tenants`): idle policy and manual park (snapshot, multipart upload to B2, manifest last, verify, then drop)
+  - Latency report (`/reports`): benchmark warm, restore and post-restore latency plus memory freed, stored as report.json in B2
+  - Library (`/library`): the app's own objects under rag/, grouped by tenant and kind
+  - Bucket explorer (`/files`): full-bucket browse, preview, download and delete, streamed through the API
+  - Dashboard (`/`): hot, parked and empty counts, vector memory in use and freed, bytes in B2, recent reports
+  - Settings (`/settings`): read-only tiering policy and the browser theme
+- **services/api/**: FastAPI, Python 3.12, boto3, qdrant-client, fastembed, Pydantic v2
   - REST API for every operation the frontend consumes, exported to `docs/api/openapi.json`
   - Backblaze B2 (S3-compatible API) with Qdrant v1.20.2 as the hot tier access isolated in the `repo/` layer
-  - Restore on query — the first query to a parked tenant restores it from B2 into any Qdrant node and reports the cost
+  - Restore on query: the first query to a parked tenant restores it from B2 into any Qdrant node and reports the cost
   - Structured JSON logging with request tracing, plus `/health` and Prometheus `/metrics`
-- **packages/shared/** — TypeScript types generated from the API contract by `pnpm gen:api`, consumed by `apps/web/` as a workspace dependency (pnpm workspaces)
+- **packages/shared/**: TypeScript types generated from the API contract by `pnpm gen:api`, consumed by `apps/web/` as a workspace dependency (pnpm workspaces)
 <!-- gen:end arch-components -->
 
 ## Runtime Topology
@@ -48,15 +48,15 @@ B2 through the API as byte streams; Qdrant never fetches from B2 itself.
 The API follows a strict layered architecture:
 
 ```
-types/     Pydantic models and the adapter ports (Protocols) — no logic
+types/     Pydantic models and the adapter ports (Protocols), no logic
   |
-config/    Settings (pydantic-settings) — depends only on types
+config/    Settings (pydantic-settings): depends only on types
   |
 repo/      Adapters: boto3 (B2), qdrant-client + httpx (Qdrant), fastembed
   |
 service/   Business logic: tenants, ingest, tiering, restore, reports, prune
   |
-runtime/   FastAPI routes — call service, never repo directly
+runtime/   FastAPI routes: call service, never repo directly
 ```
 
 ### Layering Rules
@@ -124,8 +124,8 @@ starts at process start, which can only delay parking, never park early.
 
 ## Deployment
 
-- **Docker Compose** — the supported way to run the full stack (see Runtime Topology).
-- **Local dev** — `docker compose up qdrant` and `pnpm dev` (web on `localhost:3000`, API on `localhost:8000`).
+- **Docker Compose**: the supported way to run the full stack (see Runtime Topology).
+- **Local dev**: `docker compose up qdrant` and `pnpm dev` (web on `localhost:3000`, API on `localhost:8000`).
 - No hosted delivery contract ships: the app needs a Qdrant node and a CPU
   embedding model, which serverless platforms do not host. External provisioning
   and deployment remain explicit user-approved actions.
@@ -133,7 +133,7 @@ starts at process start, which can only delay parking, never park early.
 ## Data Stores
 
 <!-- gen:begin arch-data-stores -->
-- **Backblaze B2 (S3-compatible API) with Qdrant v1.20.2 as the hot tier** — the only data store; there is no application database
+- **Backblaze B2 (S3-compatible API) with Qdrant v1.20.2 as the hot tier**: the only data store; there is no application database
   - Every object this app writes lives under the `rag/` key prefix of one bucket
   - Listing, per-key metadata and presigned URLs all come from the S3 surface below
   - The primary entity is `TenantDetail`; one tenant is one object
@@ -142,23 +142,23 @@ starts at process start, which can only delay parking, never park early.
 ## External Services
 
 <!-- gen:begin arch-external-services -->
-- **Backblaze B2 (S3-compatible API) with Qdrant v1.20.2 as the hot tier** — reached only through `services/api/app/repo/`, using:
-  - `put_object` — tenant documents, _tenant.json, latest.json (written last) and report.json
-  - `create_multipart_upload / upload_part / complete_multipart_upload / abort_multipart_upload` — stream a Qdrant snapshot to B2 without holding it in memory; abort on any failure so no partial object appears
-  - `head_object` — verify snapshot size against the manifest, the /health probe (head_bucket) and file metadata
-  - `get_object` — re-read a snapshot to verify its sha256, download it for restore, read corpus, manifests and reports, and proxy preview and download
-  - `list_objects_v2` — bucket explorer, Library view, tenant discovery, snapshot history and report list
-  - `delete_object / delete_objects` — bucket explorer delete, tenant delete scoped to its corpus and snapshot prefixes, opt-in snapshot prune, end-to-end test cleanup
+- **Backblaze B2 (S3-compatible API) with Qdrant v1.20.2 as the hot tier**: reached only through `services/api/app/repo/`, using:
+  - `put_object`: tenant documents, _tenant.json, latest.json (written last) and report.json
+  - `create_multipart_upload / upload_part / complete_multipart_upload / abort_multipart_upload`: stream a Qdrant snapshot to B2 without holding it in memory; abort on any failure so no partial object appears
+  - `head_object`: verify snapshot size against the manifest, the /health probe (head_bucket) and file metadata
+  - `get_object`: re-read a snapshot to verify its sha256, download it for restore, read corpus, manifests and reports, and proxy preview and download
+  - `list_objects_v2`: bucket explorer, Library view, tenant discovery, snapshot history and report list
+  - `delete_object / delete_objects`: bucket explorer delete, tenant delete scoped to its corpus and snapshot prefixes, opt-in snapshot prune, end-to-end test cleanup
 <!-- gen:end arch-external-services -->
 
 ## Trust Boundaries
 
 See [docs/SECURITY.md](docs/SECURITY.md) for full security documentation.
 
-- **Frontend -> API** — CORS-restricted to configured origins (`GET/POST/PATCH/DELETE/OPTIONS`). `CORSMiddleware` is registered LAST in `main.py` (outermost) so it wraps **every** response, including uncaught-exception 500s. See [docs/RELIABILITY.md](docs/RELIABILITY.md#error-handling). A per-IP rate-limit middleware sits inner to CORS; see [docs/SECURITY.md](docs/SECURITY.md#rate-limiting).
-- **API -> B2** — application key, signature v4, custom user agent on every request.
-- **API -> Qdrant** — plain HTTP to `QDRANT_URL` on the Compose network; no API key is configured for the local node.
-- **Browser -> B2** — none. No presigned URLs are issued; preview and download are proxied.
+- **Frontend -> API**: CORS-restricted to configured origins (`GET/POST/PATCH/DELETE/OPTIONS`). `CORSMiddleware` is registered LAST in `main.py` (outermost) so it wraps **every** response, including uncaught-exception 500s. See [docs/RELIABILITY.md](docs/RELIABILITY.md#error-handling). A per-IP rate-limit middleware sits inner to CORS; see [docs/SECURITY.md](docs/SECURITY.md#rate-limiting).
+- **API -> B2**: application key, signature v4, custom user agent on every request.
+- **API -> Qdrant**: plain HTTP to `QDRANT_URL` on the Compose network; no API key is configured for the local node.
+- **Browser -> B2**: none. No presigned URLs are issued; preview and download are proxied.
 
 ## Observability
 
@@ -180,7 +180,7 @@ See [docs/SECURITY.md](docs/SECURITY.md) for full security documentation.
 The FastAPI routers and Pydantic models are the single source of truth. The
 frontend's `API_CLIENT_ROUTES` registry, the `qk` query-key factory and the
 shared TypeScript types are **generated** from the exported artifact by
-`pnpm gen:api`, so the client cannot drift from the backend — there is no
+`pnpm gen:api`, so the client cannot drift from the backend: there is no
 hand-written copy left to disagree. The two contract tests are kept as a
 belt-and-braces check that the generated files and the committed artifact are
 still in step.
@@ -191,7 +191,7 @@ still in step.
 | `DELETE /files/{key}` | `DeleteFileResponse` | `legacyFileDelete` |
 | `DELETE /tenants/{tenant_id}` | `DeleteTenantResult` | `tenantDelete` |
 | `GET /files` | `FileMetadata[]` | `files` |
-| `GET /files-by-key/content` | — | `fileByKeyContent` |
+| `GET /files-by-key/content` | n/a | `fileByKeyContent` |
 | `GET /files-by-key/detail` | `FileMetadataDetail` | `fileByKeyDetail` |
 | `GET /files-by-key/download` | `FileUrlResponse` | `fileByKeyDownload` |
 | `GET /files-by-key/metadata` | `FileMetadata` | `fileByKeyMetadata` |
@@ -203,7 +203,7 @@ still in step.
 | `GET /files/stats/activity` | `DailyUploadCount[]` | `uploadActivity` |
 | `GET /health` | `HealthStatus` | `health` |
 | `GET /library` | `LibraryEntry[]` | `library` |
-| `GET /metrics` | — | _server-only_ |
+| `GET /metrics` | n/a | _server-only_ |
 | `GET /reports` | `ReportSummary[]` | `reports` |
 | `GET /reports/{run_id}` | `LatencyReport` | `reportDetail` |
 | `GET /reports/progress` | `BenchmarkProgress` | `reportProgress` |
@@ -216,7 +216,7 @@ still in step.
 | `PATCH /tenants/{tenant_id}` | `TenantDetail` | `tenantUpdate` |
 | `POST /reports` | `LatencyReport` | `reportRun` |
 | `POST /snapshots/prune` | `PruneResult` | `snapshotsPrune` |
-| `POST /tenants` | — | `tenantCreate` |
+| `POST /tenants` | n/a | `tenantCreate` |
 | `POST /tenants/{tenant_id}/park` | `ParkResult` | `tenantPark` |
 | `POST /tenants/{tenant_id}/query` | `QueryResponse` | `tenantQuery` |
 | `POST /tenants/{tenant_id}/restore` | `RestoreResult` | `tenantRestore` |
@@ -227,7 +227,7 @@ still in step.
 ## Canonical Files
 
 <!-- gen:begin arch-canonical-files -->
-Hand-written — this is the file to edit:
+Hand-written: this is the file to edit:
 
 - Layered API handler: `services/api/app/runtime/`
 - Service orchestration: `services/api/app/service/`
@@ -236,38 +236,38 @@ Hand-written — this is the file to edit:
 - Config (pydantic-settings): `services/api/app/config/settings.py`
 - Structural tests: `services/api/tests/test_structure.py`
 - OpenAPI exporter: `services/api/scripts/export_openapi.py`
-- Frontend API client — error policy, transport, fallback: `apps/web/src/lib/api-client.ts`
-- Frontend data layer — caching, invalidation, polling: `apps/web/src/lib/queries.ts`
+- Frontend API client: error policy, transport, fallback: `apps/web/src/lib/api-client.ts`
+- Frontend data layer: caching, invalidation, polling: `apps/web/src/lib/queries.ts`
 - Shared type barrel: `packages/shared/src/types.ts`
 - Generator policy: `scripts/gen/api-gen.config.json`
 - Sample manifest behind the generated docs: `docs/exec-plans/sample.json`
 
-Generated — **never hand-edit**; change the source and re-run the command:
+Generated, **never hand-edit**; change the source and re-run the command:
 
-- `docs/api/openapi.json` — `pnpm contract:export` (source: the routers and models)
-- `packages/shared/src/generated/api-types.ts` — `pnpm gen:api`
-- `apps/web/src/lib/generated/api-routes.ts` — `pnpm gen:api`
-- `apps/web/src/lib/generated/query-keys.ts` — `pnpm gen:api`
-- The marker-delimited regions of this file, `AGENTS.md`, `README.md` and the 0 `infra/` runbooks — `pnpm gen:docs`
+- `docs/api/openapi.json`: `pnpm contract:export` (source: the routers and models)
+- `packages/shared/src/generated/api-types.ts`: `pnpm gen:api`
+- `apps/web/src/lib/generated/api-routes.ts`: `pnpm gen:api`
+- `apps/web/src/lib/generated/query-keys.ts`: `pnpm gen:api`
+- The marker-delimited regions of this file, `AGENTS.md`, `README.md` and the 0 `infra/` runbooks: `pnpm gen:docs`
 <!-- gen:end arch-canonical-files -->
 
 ## Core Features
 
 <!-- gen:begin arch-core-features -->
-- [Tenants](docs/features/tenants.md) — create tenants from text or Markdown files (or seed demo tenants), one Qdrant collection each, corpus in B2
-- [Tiering](docs/features/tiering.md) — idle policy and manual park: snapshot, multipart upload to B2, manifest last, verify, then drop
-- [Restore on query](docs/features/restore.md) — the first query to a parked tenant restores it from B2 into any Qdrant node and reports the cost
-- [Latency report](docs/features/latency-report.md) — benchmark warm, restore and post-restore latency plus memory freed, stored as report.json in B2
-- [Library](docs/features/library.md) — the app's own objects under rag/, grouped by tenant and kind
-- [Bucket explorer](docs/features/file-browser.md) — full-bucket browse, preview, download and delete, streamed through the API
-- [Dashboard](docs/features/dashboard.md) — hot, parked and empty counts, vector memory in use and freed, bytes in B2, recent reports
-- [Settings](docs/features/settings.md) — read-only tiering policy and the browser theme
+- [Tenants](docs/features/tenants.md): create tenants from text or Markdown files (or seed demo tenants), one Qdrant collection each, corpus in B2
+- [Tiering](docs/features/tiering.md): idle policy and manual park (snapshot, multipart upload to B2, manifest last, verify, then drop)
+- [Restore on query](docs/features/restore.md): the first query to a parked tenant restores it from B2 into any Qdrant node and reports the cost
+- [Latency report](docs/features/latency-report.md): benchmark warm, restore and post-restore latency plus memory freed, stored as report.json in B2
+- [Library](docs/features/library.md): the app's own objects under rag/, grouped by tenant and kind
+- [Bucket explorer](docs/features/file-browser.md): full-bucket browse, preview, download and delete, streamed through the API
+- [Dashboard](docs/features/dashboard.md): hot, parked and empty counts, vector memory in use and freed, bytes in B2, recent reports
+- [Settings](docs/features/settings.md): read-only tiering policy and the browser theme
 <!-- gen:end arch-core-features -->
 
 ## References
 
 <!-- gen:begin arch-references -->
-- [docs/SECURITY.md](docs/SECURITY.md) — security principles and implementation
-- [docs/RELIABILITY.md](docs/RELIABILITY.md) — reliability expectations
-- [AGENTS.md](AGENTS.md) — architectural invariants and agent instructions
+- [docs/SECURITY.md](docs/SECURITY.md): security principles and implementation
+- [docs/RELIABILITY.md](docs/RELIABILITY.md): reliability expectations
+- [AGENTS.md](AGENTS.md): architectural invariants and agent instructions
 <!-- gen:end arch-references -->

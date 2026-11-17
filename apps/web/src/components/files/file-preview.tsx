@@ -226,7 +226,7 @@ export function FilePreview({
             ) : detailError ? (
               <p className="text-xs text-destructive" aria-live="polite">
                 Couldn&apos;t load detailed metadata. It&apos;s recomputed by
-                downloading the file — try again, or check the API logs.
+                downloading the file: try again, or check the API logs.
               </p>
             ) : detail ? (
               <FileMetadataPanel metadata={detail} />

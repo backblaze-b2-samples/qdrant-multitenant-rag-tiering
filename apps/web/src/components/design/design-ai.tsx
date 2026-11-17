@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Section } from "./section";
 
 /**
- * AI design elements — neutral primitives for building a chat or
+ * AI design elements: neutral primitives for building a chat or
  * assistant surface. Implementors can re-skin with their own brand.
  */
 export function DesignAI() {
@@ -13,7 +13,7 @@ export function DesignAI() {
     <Section
       id="ai"
       title="AI elements"
-      description="Primitives for chat / assistant surfaces. Compose them into a drawer, inline panel, or whatever fits your product — we intentionally don't ship a dummy assistant."
+      description="Primitives for chat / assistant surfaces. Compose them into a drawer, inline panel, or whatever fits your product: we intentionally don't ship a dummy assistant."
     >
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -26,7 +26,7 @@ export function DesignAI() {
                 <Bot className="h-3.5 w-3.5" />
               </span>
               <div className="chat-bubble assistant">
-                Hi — I can help you search your bucket, summarize activity,
+                Hi, I can help you search your bucket, summarize activity,
                 or draft storage policies. What&apos;s on your mind?
               </div>
             </div>
@@ -74,8 +74,7 @@ export function DesignAI() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground pt-2">
-              The AI avatar uses <code className="font-mono text-[11px]">.ai-avatar</code>{" "}
-              — a solid accent-blue disc. Swap the icon or color to match
+              The AI avatar uses <code className="font-mono text-[11px]">.ai-avatar</code>, a solid accent-blue disc. Swap the icon or color to match
               your assistant&apos;s identity.
             </p>
             <div className="flex items-center gap-3">

@@ -6,7 +6,7 @@ when setting up a fresh clone, when `pnpm verify` fails or runs slow, or before
 changing the API contract or the Python lock.
 
 The command index lives in
-[dev-workflows.md](dev-workflows.md#commands) — this file explains the
+[dev-workflows.md](dev-workflows.md#commands): this file explains the
 mechanics behind those commands.
 
 ## Local environments
@@ -27,7 +27,7 @@ with `--frozen-lockfile`, so run `pnpm install` yourself after editing
 `setup` and `doctor` must always be invoked as `pnpm run setup` / `pnpm run
 doctor`. Both are built-in pnpm commands before pnpm 11, and pnpm 10 is the
 minimum `engines` allows (CI pins 11), so the bare `pnpm setup` / `pnpm doctor`
-forms run pnpm's own commands — `pnpm setup` silently edits your shell profile instead
+forms run pnpm's own commands: `pnpm setup` silently edits your shell profile instead
 of preparing the repo. `predev` and `verify:full` therefore use the `run` form
 too, and `pnpm check:agent-docs` asserts it.
 
@@ -52,9 +52,9 @@ warm machine and too short during a cold Next.js compile.
 
 It probes `GET /health` on the API and `GET /` on the web app, over `127.0.0.1`
 and `::1` so a v4-only uvicorn is not missed by a name lookup that resolves to
-IPv6 first. With no explicit port it scans the same ranges the kit really uses —
+IPv6 first. With no explicit port it scans the same ranges the kit really uses:
 web 3000-3009 (Next's own fallback) and API 8000-8009
-([`scripts/pick-port.mjs`](../scripts/pick-port.mjs)) — so `--web-port` /
+([`scripts/pick-port.mjs`](../scripts/pick-port.mjs)), so `--web-port` /
 `--api-port` (or `WEB_PORT` / `API_PORT`, which `scripts/dev.sh` already
 exports) are an optimisation, not a requirement. An explicit port is
 authoritative and its neighbours are not probed, so it cannot silently pass
@@ -64,7 +64,7 @@ The deadline defaults to 120 seconds (`--timeout`, or `WAIT_READY_TIMEOUT`).
 Exit codes match the split [`scripts/local-bind.mjs`](../scripts/local-bind.mjs)
 makes for binds: `1` means nothing answered before the deadline, and `2` means
 the sandbox denied the connection outright (`EACCES`/`EPERM`), which no amount
-of waiting fixes — grant local network permission instead. A `degraded` health
+of waiting fixes: grant local network permission instead. A `degraded` health
 response still counts as ready: the app is serving and B2 connectivity is the
 thing to go look at, not the boot.
 
@@ -98,7 +98,7 @@ Running them inside the workspace is the point. A standalone script outside it
 has to resolve Playwright and its browser by hand, which is where the
 `executablePath` / `chrome-headless-shell` class of breakage comes from. As a
 project, the browser, the viewport (1440x900), the server launch and the
-readiness wait are all configuration — and `reuseExistingServer` means a dev
+readiness wait are all configuration, and `reuseExistingServer` means a dev
 server you already had running is reused, never killed. The `verify` project
 runs single-worker on purpose: these specs drive one dev server and, in a media
 app, one set of native workers, and running them in parallel is what produced
@@ -107,7 +107,7 @@ truncated screenshots and OOM kills.
 ### Which server the specs drive
 
 `baseURL` and `webServer.url` come from `WEB_PORT` (or `VERIFY_BASE_URL`
-outright), defaulting to `http://127.0.0.1:3000`. That is not tidiness — it is
+outright), defaulting to `http://127.0.0.1:3000`. That is not tidiness: it is
 what keeps a contended machine honest.
 
 A verification pass that finds ports 3000/8000 already held by a human's dev
@@ -127,10 +127,10 @@ a spec runs on any machine and in CI:
 
 | Export | What it saves you writing |
 |---|---|
-| `test` / `diagnostics` | A page already collecting console errors, uncaught page exceptions, failed requests, and 4xx/5xx responses — attached *before* the first navigation, so nothing is missed |
+| `test` / `diagnostics` | A page already collecting console errors, uncaught page exceptions, failed requests, and 4xx/5xx responses: attached *before* the first navigation, so nothing is missed |
 | `waitForTerminal` | The bounded wait every run needs: a deadline, a poll, and a mid-wait screenshot hook so a stalled run still leaves evidence |
 | `safeShot` | A screenshot that never fails the run, with an optional `maxHeight` so a tall page does not produce a giant capture |
-| `affordances` | An app-agnostic scrape of what a screen offers — headings, in-app links, buttons, inputs, selects, file inputs — answering navigation questions from the DOM instead of from an image |
+| `affordances` | An app-agnostic scrape of what a screen offers (headings, in-app links, buttons, inputs, selects, file inputs) answering navigation questions from the DOM instead of from an image |
 | `assertMediaPaints` | Proof that an `<img>`/`<video>` actually paints, not merely that it is in the DOM |
 | `selectShadcnOption`, `uploadFile`, `waitForStage` | The shadcn/Radix interactions whose selectors are easy to get subtly wrong |
 | `noteVerify` | One JSONL line into the run's sidecar, fire-and-forget |
@@ -189,8 +189,8 @@ do not add full OpenAPI codegen until this first contract check proves
 insufficient.
 
 Scope: the check covers **routes** (path + verb), not payloads. Response and
-request *shapes* — and the hand-written mirrors of the Pydantic models in
-`packages/shared/src/types.ts` — are still synced by hand and unverified. See
+request *shapes* (and the hand-written mirrors of the Pydantic models in
+`packages/shared/src/types.ts`) are still synced by hand and unverified. See
 the tech-debt tracker.
 
 ## Python dependency updates
@@ -229,7 +229,7 @@ run an unconstrained install from `requirements.txt` as a recovery shortcut.
 its instruction-trust boundary, thin cross-agent shims, command docs, CI claims,
 internal Markdown links, and `.env` ignore coverage
 (`scripts/check-agent-docs.mjs`, helpers in `scripts/agent-docs/`). It is
-dependency-free by design — it runs without `pnpm install`, which is why its CI
+dependency-free by design: it runs without `pnpm install`, which is why its CI
 job skips the install step. Register every new agent shim there so it can't be
 emptied or unlinked from `AGENTS.md` unnoticed (see AGENTS.md §9). A file that
 is missing *or* empty fails its own assertion rather than skipping the group it
@@ -240,12 +240,12 @@ the rule must read as a prohibition (a sentence naming `.env`, credentials, keys
 or a leak surface only counts when the same sentence forbids something), and
 [SECURITY.md](SECURITY.md#agent-security-rules) must point at that heading with
 an anchored link whose target really exists. Renumbering the section therefore
-fails the check — fix the link in the same change rather than leaving a
+fails the check: fix the link in the same change rather than leaving a
 hyperlink that quietly lands the reader at the top of `AGENTS.md`.
 
 Every *other* relative Markdown link is checked the same way: the target file
 must exist, and an `#anchor` must match a real heading in it. This is what makes
-moving or splitting a doc safe — GitHub serves a file whose anchor no longer
+moving or splitting a doc safe: GitHub serves a file whose anchor no longer
 exists and lands the reader at the top, so a dead anchor otherwise reads as a
 working link. External `http`/`mailto` links are never fetched, so the check
 stays offline; anchors are slugged the way GitHub does it, including the `--` a
@@ -256,7 +256,7 @@ each path (global excludes and `.git/info/exclude` don't count). Each path is
 asked independently: one that git cannot answer for (say a symlinked
 `apps/web/`) is reported as its own `SKIPPED: .env ignore check for <path>
 (...)` line while every other path is still checked and can still fail the run.
-Only when *no* path is answerable — outside a git work tree, for instance — is
+Only when *no* path is answerable (outside a git work tree, for instance) is
 the whole group abandoned with a single `SKIPPED: .env ignore checks (...)`
 notice. Skipped checks are never counted as passes and never fail the run.
 Example/template env files must stay trackable anywhere in the tree;
@@ -268,7 +268,7 @@ live there too.
 `pnpm verify` is the canonical credential-free non-live gate for PRs. It is composed of
 `pnpm check:agent-docs`, then `pnpm verify:api` (backend lint, backend tests,
 structural boundary tests), then `pnpm verify:web` (generated-file drift,
-frontend lint, frontend unit tests, frontend typecheck + build) — so the
+frontend lint, frontend unit tests, frontend typecheck + build), so the
 agent-doc guard runs first and CI can run all three checks as parallel jobs. `package.json` is the single
 source of truth for the literal command chain; when it changes, update the
 plain-language list here and in `AGENTS.md` §6 (see
@@ -308,16 +308,16 @@ pnpm verify:full
 Runs first inside `pnpm verify:web`, and fails when a generated file no longer
 matches its source:
 
-- `node scripts/gen-api.mjs --check` — the shared types, the client route
+- `node scripts/gen-api.mjs --check`: the shared types, the client route
   registry and the query-key factory, against `docs/api/openapi.json`. Recovery:
   `pnpm contract:export && pnpm gen:api`.
-- `node scripts/gen-docs.mjs --check` — the marker-delimited doc regions,
+- `node scripts/gen-docs.mjs --check`: the marker-delimited doc regions,
   against `docs/exec-plans/sample.json`. Recovery: `pnpm gen:docs`.
 
 A *missing or unbalanced* `gen:begin` / `gen:end` marker pair is a hard error in
 both modes rather than a silently re-appended region, because losing one is
-normally the symptom of a whole-file rewrite. Restore the pair — `git checkout --
-<file>` is usually enough — and re-run `pnpm gen:docs`.
+normally the symptom of a whole-file rewrite. Restore the pair: `git checkout --
+<file>` is usually enough, and re-run `pnpm gen:docs`.
 
 Both generators are node-stdlib only: they need no `pnpm install`, no venv and
 no running backend, so they work in a fresh clone.
@@ -364,7 +364,7 @@ non-live gate neither starts a server nor allocates a port. Playwright starts
 `pnpm dev` from `apps/web/playwright.config.ts` and waits on
 `http://localhost:3000`. Note that `next dev` falls back to the next free port
 when 3000 is taken, so an unrelated process on 3000 makes `pnpm test:e2e` time
-out waiting on a URL the app never claimed — `pnpm run doctor` warns about this
+out waiting on a URL the app never claimed: `pnpm run doctor` warns about this
 but does not fail. The API starts at `localhost:8000` or the next free port chosen
 by `scripts/dev.sh`.
 
@@ -411,11 +411,11 @@ credentials.
 
 ## Continuous Integration
 - `.github/workflows/ci.yml` runs `pnpm check:agent-docs` plus the two halves
-  of `pnpm verify` — `pnpm verify:api` and `pnpm verify:web` — as parallel jobs
+  of `pnpm verify` (`pnpm verify:api` and `pnpm verify:web`) as parallel jobs
   on every PR and push to `main`. Same gates as running `pnpm verify` locally,
   but they report independently, so a frontend failure never hides a backend
   failure.
-- No secrets required — backend tests deny socket access and run against
+- No secrets required: backend tests deny socket access and run against
   in-memory fakes of B2, Qdrant and the embedder, including explicit
   healthy/degraded `/health` cases. `pnpm verify:full`
   and E2E are not in CI

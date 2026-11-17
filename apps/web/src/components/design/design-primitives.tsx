@@ -139,7 +139,7 @@ export function DesignPrimitives() {
               <Info />
               <AlertTitle>Informational</AlertTitle>
               <AlertDescription>
-                Alerts persist until dismissed — use for announcements.
+                Alerts persist until dismissed: use for announcements.
               </AlertDescription>
             </Alert>
             <Progress value={progress} className="progress-gradient" />

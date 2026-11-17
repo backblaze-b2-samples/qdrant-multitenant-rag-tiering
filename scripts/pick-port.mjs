@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Probe loopbacks (not wildcards) because uvicorn binds 127.0.0.1 by
 // default, and on macOS a 127.0.0.1 conflict doesn't show up via a
-// 0.0.0.0 probe — the two don't overlap there.
+// 0.0.0.0 probe: the two don't overlap there.
 //
 // Usage:  node scripts/pick-port.mjs [start]   (default start=8000)
 
@@ -30,7 +30,7 @@ async function isFree(port) {
   }
 
   // `unsupported` means the loopback family itself is missing (an IPv6-disabled
-  // container answering the ::1 probe). That is not a reason to skip the port —
+  // container answering the ::1 probe). That is not a reason to skip the port:
   // uvicorn will bind the family that does exist.
   return results.every(
     (result) => result.status === "free" || result.status === "unsupported",

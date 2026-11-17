@@ -1,5 +1,5 @@
 {
-  "$comment": "Naming and scoping policy for `pnpm gen:api`. This file holds NO schema: every route, method, parameter and response type comes from docs/api/openapi.json, which `pnpm contract:export` writes from the FastAPI routers and Pydantic models. What lives here is the part a machine cannot derive — the names humans chose, and the deliberate exclusions. Edit this file; never edit a generated file.",
+  "$comment": "Naming and scoping policy for `pnpm gen:api`. This file holds NO schema: every route, method, parameter and response type comes from docs/api/openapi.json, which `pnpm contract:export` writes from the FastAPI routers and Pydantic models. What lives here is the part a machine cannot derive: the names humans chose, and the deliberate exclusions. Edit this file; never edit a generated file.",
   "clientName": "API_CLIENT_ROUTES",
   "routeTypeName": "ApiClientRoute",
   "queryKeys": {
@@ -225,7 +225,7 @@
     }
   },
   "escapeHatch": {
-    "$comment": "The generator owns the mechanical slice only. Everything named here is hand-written on purpose because it encodes per-app judgement the contract does not describe, and `pnpm gen:api` never writes to these paths. If you need behaviour the generator cannot express, it belongs in one of these files — not in a generated one.",
+    "$comment": "The generator owns the mechanical slice only. Everything named here is hand-written on purpose because it encodes per-app judgement the contract does not describe, and `pnpm gen:api` never writes to these paths. If you need behaviour the generator cannot express, it belongs in one of these files, not in a generated one.",
     "handWritten": {
       "apps/web/src/lib/api-client.ts": "error policy, API base resolution, the legacy-route fallback, path-parameter substitution and content-URL resolution, and CORS diagnostics",
       "apps/web/src/lib/queries.ts": "every caching, polling, invalidation and query-vs-mutation decision",

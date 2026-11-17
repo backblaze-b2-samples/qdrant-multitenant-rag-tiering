@@ -65,9 +65,9 @@ import { stateBadge } from "@/lib/tenant-state";
 // cannot answer. Re-exported here because this module is the data layer's
 // public surface: components and tests import `qk` from `@/lib/queries`.
 //
-// The caching policy below — staleTime, refetchInterval, retry, `enabled`
+// The caching policy below (staleTime, refetchInterval, retry, `enabled`
 // gating, the query-vs-mutation choice, and the cache surgery in
-// `dropDeletedFileFromCache` — is hand-written on purpose and is never
+// `dropDeletedFileFromCache`) is hand-written on purpose and is never
 // generated.
 export { qk };
 
@@ -75,7 +75,7 @@ export type Health = Awaited<ReturnType<typeof getHealth>>;
 
 /**
  * Gate a query on something being open/visible. Deliberately the only option we
- * expose, so callers can't drift the caching policy per call site — the ⌘K
+ * expose, so callers can't drift the caching policy per call site: the ⌘K
  * palette reuses `useFiles`' key (and therefore its cache) instead of fetching
  * its own private, smaller list.
  */
@@ -106,7 +106,7 @@ export function useUploadActivity(days = 7) {
   });
 }
 
-// Content-proxy preview URL — only fetched when `enabled` is true (e.g., when
+// Content-proxy preview URL, only fetched when `enabled` is true (e.g., when
 // the dialog opens for a specific file). Kept short-lived (60s): it is cheap to
 // regenerate and a stale one could point at a key deleted meanwhile.
 export function usePreviewUrl(key: string | undefined, enabled: boolean) {
@@ -119,7 +119,7 @@ export function usePreviewUrl(key: string | undefined, enabled: boolean) {
 }
 
 // Rich metadata for an already-stored file. The server recomputes it on demand
-// (a full object download), so it's only fetched when `enabled` — i.e. the
+// (a full object download), so it's only fetched when `enabled`: i.e. the
 // preview dialog is open AND the user expands "Detailed metadata". Kept
 // short-lived like the preview URL; cheap correctness under key overwrites.
 export function useFileDetail(key: string | undefined, enabled: boolean) {
@@ -151,11 +151,11 @@ export function useHealth() {
  *
  * Invalidation alone is not enough: the refetch re-lists the whole bucket and
  * took 5-6s in practice, so the success toast fired while the row was still
- * listed — and using that stale row's Preview 404'd. Editing the cache makes
+ * listed, and using that stale row's Preview 404'd. Editing the cache makes
  * the row disappear with the toast; the invalidation that follows still
  * reconciles against the server.
  *
- * Exported for tests — the mutation below is its only production caller.
+ * Exported for tests: the mutation below is its only production caller.
  */
 export function dropDeletedFileFromCache(qc: QueryClient, fileKey: string) {
   qc.setQueriesData<FileMetadata[]>(
@@ -174,7 +174,7 @@ export function dropDeletedFileFromCache(qc: QueryClient, fileKey: string) {
  *
  * A mutation, not a query: it has a server side effect (it bumps the download
  * counter) and it must never be cached or replayed. Being a mutation is also
- * what gives the UI an honest pending state — the old code awaited the presign
+ * what gives the UI an honest pending state: the old code awaited the presign
  * inside a plain click handler, so a slow round trip left the screen completely
  * unchanged and a user could not tell a working download from a dead button.
  *
