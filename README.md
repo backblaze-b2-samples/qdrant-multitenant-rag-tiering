@@ -24,7 +24,31 @@ app's own features instead of rebuilding the same shell. Storage is
 <!-- gen:end readme-header -->
 
 <!-- gen:begin readme-screenshots -->
+## What it looks like
 
+**Dashboard** — Hot, parked and empty tenant counts, vector memory in use and freed, snapshot and corpus bytes in B2, a per-tenant vector footprint chart and the latest latency reports.
+
+![Dashboard with hot and parked tenant counts, vector memory in use and freed, and bytes in B2](docs/images/dashboard.png)
+
+**Tenants** — Every tenant with its hot or parked state, points, documents, vector memory in Qdrant (or memory freed) and snapshot size in B2, plus seed, tiering sweep and prune controls.
+
+![Tenants table with hot and parked states, points, vector memory and snapshot sizes](docs/images/tenants.png)
+
+**Tenant detail** — A query to a parked tenant restores its collection from B2 first, reports the download and load time, then returns the ranked chunks beside the tenant's documents and snapshots in B2.
+
+![Tenant detail answering a query after restoring the parked collection from B2](docs/images/tenant-query.png)
+
+**Latency reports** — Pick up to six tenants and run a benchmark that parks and restores each one, with every past run listed from its report.json in B2.
+
+![Latency reports page with the benchmark form and the list of stored runs](docs/images/reports.png)
+
+**Report detail** — One run's warm, restore and post-restore latency per tenant, the memory freed by parking, and the full figures table with a result-match check.
+
+![Latency report with warm, restore and post-restore latency charts and the figures table](docs/images/report-detail.png)
+
+**Library** — Everything the app wrote to B2, grouped by tenant into corpus files, collection snapshots with their latest.json manifest, and latency reports.
+
+![Library of the app's B2 objects grouped by tenant into corpus, snapshots and reports](docs/images/library.png)
 <!-- gen:end readme-screenshots -->
 
 ## What it shows
