@@ -1,14 +1,34 @@
 import type {
+  BenchmarkRequest,
   DailyUploadCount,
   DeleteFileResponse,
+  DeleteTenantResult,
   FileMetadata,
   FileMetadataDetail,
-  FileUploadResponse,
   FileUrlResponse,
   HealthStatus,
-  PresignUploadResponse,
+  LatencyReport,
+  LibraryEntry,
+  ParkResult,
+  PruneRequest,
+  PruneResult,
+  QueryRequest,
+  QueryResponse,
+  ReportSummary,
+  RestoreResult,
+  SeedRequest,
+  SeedResult,
+  SnapshotEntry,
+  TenantCreate,
+  TenantDetail,
+  TenantSummary,
+  TenantUpdate,
+  TieringPolicy,
+  TieringRunRequest,
+  TieringRunResult,
+  TieringStats,
   UploadStats,
-} from "@vibe-coding-starter-kit/shared";
+} from "@qdrant-multitenant-rag-tiering/shared";
 
 import { API_CLIENT_ROUTES } from "./generated/api-routes";
 
@@ -19,9 +39,10 @@ import { API_CLIENT_ROUTES } from "./generated/api-routes";
 // registry moved behind a generator.
 //
 // Everything else in this file is hand-written on purpose — error policy, base
-// URL resolution, the legacy-route fallback, the CORS diagnostics and the XHR
-// upload transport are per-app judgement the contract does not describe. See
-// `scripts/gen/api-gen.config.json` (`escapeHatch`).
+// URL resolution, the legacy-route fallback, path-parameter substitution,
+// content-URL resolution and the CORS diagnostics are per-app judgement the
+// contract does not describe. See `scripts/gen/api-gen.config.json`
+// (`escapeHatch`).
 export { API_CLIENT_ROUTES };
 
 // Single-origin deploys (Vercel `services`: one project serving web + API) put
@@ -74,32 +95,6 @@ function networkError(): ApiError {
   }
   return new ApiError(
     "Couldn't reach the API, or the server returned an error the browser blocked (CORS). Check the API logs.",
-    0,
-  );
-}
-
-/**
- * Build the status-0 ApiError for a failed browser→B2 PUT.
- *
- * Deliberately not `networkError()`: these bytes never touch the API, so
- * "check the API logs" sends the developer to the one place that looks fine —
- * the presign that produced this URL succeeded and logged a clean 200.
- *
- * On a deployed origin the overwhelmingly likely cause is that the *bucket's*
- * CORS does not allow that origin, so the browser blocks the PUT before it
- * leaves and XHR reports only a contentless `error` event. Local dev rarely
- * trips it because localhost origins are usually already allowed — which is
- * exactly why it first appears immediately after a deploy. Name the cause and
- * the remedy instead of leaving a mystery.
- */
-function storageNetworkError(): ApiError {
-  if (typeof navigator !== "undefined" && navigator.onLine === false) {
-    return new ApiError("You appear to be offline — check your connection", 0);
-  }
-  return new ApiError(
-    "Couldn't upload to B2 storage. If this app is deployed, the bucket's CORS " +
-      "must allow this origin — run services/api/scripts/setup_b2_cors.py " +
-      "--origin <your origin>.",
     0,
   );
 }
@@ -231,18 +226,40 @@ export async function getFileDetail(key: string) {
   );
 }
 
+/**
+ * Resolve an API-relative URL (the content proxy) against API_BASE.
+ *
+ * Preview and download URLs come back as `/files-by-key/content?...`: the API
+ * streams the bytes itself, so no presigned B2 URL ever reaches the browser.
+ * The API does not know which origin the browser reaches it on, so the client
+ * prefixes its own base here. Absolute URLs (a public-bucket `url`) pass through.
+ */
+export function resolveApiUrl(url: string): string {
+  if (typeof url !== "string" || !url.startsWith("/")) return url;
+  return `${API_BASE.replace(/\/$/, "")}${url}`;
+}
+
+async function contentUrl(promise: Promise<FileUrlResponse>): Promise<FileUrlResponse> {
+  const response = await promise;
+  return { ...response, url: resolveApiUrl(response.url) };
+}
+
 export async function getDownloadUrl(key: string) {
-  return apiFetchWithLegacyFallback<FileUrlResponse>(
-    `${API_CLIENT_ROUTES.fileByKeyDownload.path}?${fileKeyQuery(key)}`,
-    () => legacyFileKeyRoute(API_CLIENT_ROUTES.legacyFileDownload.path, key)
+  return contentUrl(
+    apiFetchWithLegacyFallback<FileUrlResponse>(
+      `${API_CLIENT_ROUTES.fileByKeyDownload.path}?${fileKeyQuery(key)}`,
+      () => legacyFileKeyRoute(API_CLIENT_ROUTES.legacyFileDownload.path, key)
+    )
   );
 }
 
-/** Preview-only presigned URL — does NOT increment the download counter. */
+/** Inline content-proxy URL — does NOT increment the download counter. */
 export async function getPreviewUrl(key: string) {
-  return apiFetchWithLegacyFallback<FileUrlResponse>(
-    `${API_CLIENT_ROUTES.fileByKeyPreview.path}?${fileKeyQuery(key)}`,
-    () => legacyFileKeyRoute(API_CLIENT_ROUTES.legacyFilePreview.path, key)
+  return contentUrl(
+    apiFetchWithLegacyFallback<FileUrlResponse>(
+      `${API_CLIENT_ROUTES.fileByKeyPreview.path}?${fileKeyQuery(key)}`,
+      () => legacyFileKeyRoute(API_CLIENT_ROUTES.legacyFilePreview.path, key)
+    )
   );
 }
 
@@ -258,84 +275,71 @@ export async function deleteFile(key: string) {
   );
 }
 
+// --- tenants, tiering, reports, library ------------------------------------
+
+type Route = { method: string; path: string };
+
 /**
- * Upload a file directly to B2 in three steps: presign (the API validates the
- * declared file and signs a short-lived PUT), a direct browser→B2 PUT, then
- * verify (the API inspects the stored object). The bytes never pass through the
- * API, which is what removes Vercel's ~4.5 MB Function payload ceiling.
- *
- * The `(file, onProgress) => FileUploadResponse` signature is unchanged, so the
- * upload queue and progress UI don't care that the transport changed. Progress
- * tracks the browser→B2 leg; when it reaches 100% the queue enters its
- * server-side phase (see `upload-status`) while `verify` runs.
+ * Substitute `{name}` path parameters. Every value is URI-encoded, so a tenant
+ * or run id can never add a path segment.
  */
-export async function uploadFile(
-  file: File,
-  onProgress?: (percent: number) => void
-): Promise<FileUploadResponse> {
-  const presign = await apiFetch<PresignUploadResponse>(
-    API_CLIENT_ROUTES.uploadPresign.path,
-    {
-      method: API_CLIENT_ROUTES.uploadPresign.method.toUpperCase(),
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        filename: file.name,
-        content_type: file.type,
-        size_bytes: file.size,
-      }),
-    }
+export function routePath(route: Route, params: Record<string, string> = {}): string {
+  return route.path.replace(/\{([a-z_]+)\}/g, (_match, name: string) => {
+    const value = params[name];
+    if (!value) throw new ApiError(`Missing path parameter: ${name}`, 400);
+    return encodeURIComponent(value);
+  });
+}
+
+function send<T>(route: Route, params: Record<string, string>, body?: unknown, query?: string) {
+  return apiFetch<T>(`${routePath(route, params)}${query ? `?${query}` : ""}`, {
+    method: route.method.toUpperCase(),
+    ...(body === undefined
+      ? {}
+      : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+  });
+}
+
+const R = API_CLIENT_ROUTES;
+
+export const listTenants = () => send<TenantSummary[]>(R.tenants, {});
+export const getTenant = (tenantId: string) =>
+  send<TenantDetail>(R.tenantDetail, { tenant_id: tenantId });
+export const createTenant = (body: TenantCreate) => send<TenantDetail>(R.tenantCreate, {}, body);
+export const seedTenants = (body: SeedRequest) => send<SeedResult>(R.tenantSeed, {}, body);
+export const updateTenant = (tenantId: string, body: TenantUpdate) =>
+  send<TenantDetail>(R.tenantUpdate, { tenant_id: tenantId }, body);
+export const deleteTenant = (tenantId: string, confirm: string) =>
+  send<DeleteTenantResult>(
+    R.tenantDelete,
+    { tenant_id: tenantId },
+    undefined,
+    new URLSearchParams({ confirm }).toString()
   );
+export const queryTenant = (tenantId: string, body: QueryRequest) =>
+  send<QueryResponse>(R.tenantQuery, { tenant_id: tenantId }, body);
+export const parkTenant = (tenantId: string) =>
+  send<ParkResult>(R.tenantPark, { tenant_id: tenantId });
+export const restoreTenant = (tenantId: string) =>
+  send<RestoreResult>(R.tenantRestore, { tenant_id: tenantId });
+export const listTenantSnapshots = (tenantId: string) =>
+  send<SnapshotEntry[]>(R.tenantSnapshots, { tenant_id: tenantId });
 
-  await putFileToStorage(presign, file, onProgress);
+export const getTieringPolicy = () => send<TieringPolicy>(R.tieringPolicy, {});
+export const getTieringStats = () => send<TieringStats>(R.tieringStats, {});
+export const runTiering = (body: TieringRunRequest) =>
+  send<TieringRunResult>(R.tieringRun, {}, body);
+export const pruneSnapshots = (body: PruneRequest) =>
+  send<PruneResult>(R.snapshotsPrune, {}, body);
 
-  return apiFetch<FileUploadResponse>(API_CLIENT_ROUTES.uploadVerify.path, {
-    method: API_CLIENT_ROUTES.uploadVerify.method.toUpperCase(),
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ key: presign.key }),
-  });
-}
+export const listReports = () => send<ReportSummary[]>(R.reports, {});
+export const getReport = (runId: string) => send<LatencyReport>(R.reportDetail, { run_id: runId });
+export const runBenchmark = (body: BenchmarkRequest) =>
+  send<LatencyReport>(R.reportRun, {}, body);
 
-/**
- * PUT the raw file bytes to the presigned B2 URL. XHR (not fetch) because only
- * XHR exposes upload progress. The signed URL binds the exact size and
- * content-type, so `presign.headers` must be sent verbatim — B2 answers a
- * mismatch with 403.
- */
-function putFileToStorage(
-  presign: PresignUploadResponse,
-  file: File,
-  onProgress?: (percent: number) => void
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-
-    xhr.upload.addEventListener("progress", (e) => {
-      if (e.lengthComputable && onProgress) {
-        onProgress(Math.round((e.loaded / e.total) * 100));
-      }
-    });
-
-    xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
-      } else {
-        // B2 errors are XML, not JSON — surface a stable message rather than
-        // the raw body (a 403 here means the signed size/type was violated).
-        reject(
-          new ApiError(`Upload to storage failed (${xhr.status})`, xhr.status)
-        );
-      }
-    });
-
-    xhr.addEventListener("error", () => reject(storageNetworkError()));
-    xhr.addEventListener("abort", () =>
-      reject(new ApiError("Upload aborted", 0)),
-    );
-
-    xhr.open(presign.method.toUpperCase(), presign.url);
-    for (const [name, value] of Object.entries(presign.headers)) {
-      xhr.setRequestHeader(name, value);
-    }
-    xhr.send(file);
-  });
-}
+export const listLibrary = (tenantId?: string, kind?: string) => {
+  const query = new URLSearchParams();
+  if (tenantId) query.set("tenant_id", tenantId);
+  if (kind) query.set("kind", kind);
+  return send<LibraryEntry[]>(R.library, {}, undefined, query.toString());
+};

@@ -29,8 +29,11 @@ and the release process. Two companion docs carry the reference material:
 - Frontend typecheck: `pnpm typecheck`
 - Frontend lint: `pnpm lint`
 - Backend lint: `pnpm lint:api`
-- E2E: `pnpm test:e2e` (run `pnpm --filter @vibe-coding-starter-kit/web exec playwright install chromium` once first)
+- E2E: `pnpm test:e2e` (run `pnpm --filter @qdrant-multitenant-rag-tiering/web exec playwright install chromium` once first)
 - App verification specs: `pnpm test:verify` (specs in the gitignored `apps/web/e2e/verify/`)
+- Tiering end-to-end (Docker + real B2): `pnpm test:e2e:tiering`
+- Full stack in containers: `docker compose up --build`; hot tier only for `pnpm dev`: `docker compose up qdrant`
+- Live B2 connectivity only: `RUN_LIVE_B2_TESTS=1 pnpm test:live:b2`
 
 What each gate checks, its prerequisites, and how to recover when one fails:
 [verification.md](verification.md).
@@ -89,7 +92,7 @@ future issue and PR body and could never be corrected retroactively.
 
 ### Review ownership
 
-This starter kit has no `CODEOWNERS` file, so GitHub assigns no reviewer
+This repository has no `CODEOWNERS` file, so GitHub assigns no reviewer
 automatically — request one manually. This is the canonical statement of that
 status: if `CODEOWNERS` is ever added, update this section, and the templates
 that point here stay correct without edits.
@@ -102,11 +105,11 @@ per-PR, and `main` between releases carries no compatibility promise.
 
 The versioned surface is what someone building on this repo actually depends on:
 the HTTP API, environment variables, `pnpm` commands, the runtime baseline, the
-required setup steps, and the starter contract in [AGENTS.md](../AGENTS.md) §2.
+required setup steps, and the shared scaffolding contract in [AGENTS.md](../AGENTS.md) §2.
 
 | Bump | The range since the last tag contains |
 |------|---------------------------------------|
-| **major** | a removed or renamed HTTP route, or a changed request/response shape; a renamed, removed, or newly required env var; a raised minimum runtime (Node, Python, pnpm); a new mandatory setup or deploy step; a renamed or removed `pnpm` command the docs name; a moved or deleted starter-contract piece |
+| **major** | a removed or renamed HTTP route, or a changed request/response shape; a renamed, removed, or newly required env var; a raised minimum runtime (Node, Python, pnpm); a new mandatory setup or deploy step; a renamed or removed `pnpm` command the docs name; a moved or deleted scaffolding-contract piece; a bumped Qdrant image or a changed snapshot manifest field |
 | **minor** | anything purely additive — a new feature, route, optional env var, command, or check |
 | **patch** | docs, CI, refactors, and fixes that leave every surface above unchanged |
 

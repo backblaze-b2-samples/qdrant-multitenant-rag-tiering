@@ -100,3 +100,26 @@ def test_all_layers_exist():
         assert layer_dir.exists(), f"Missing layer directory: app/{layer}/"
         init_file = layer_dir / "__init__.py"
         assert init_file.exists(), f"Missing __init__.py in app/{layer}/"
+
+
+# Third-party clients this sample adds, contained in repo/ like boto3: the hot
+# tier (qdrant_client + raw httpx) and the embedder (fastembed / onnxruntime).
+CONTAINED_CLIENTS = ("qdrant_client", "fastembed", "onnxruntime", "httpx")
+
+
+def test_third_party_clients_only_in_repo():
+    """Verify Qdrant, embedding and raw-HTTP clients are only imported in app/repo/."""
+    violations = []
+    for layer in LAYER_ORDER:
+        if layer == "repo":
+            continue
+        layer_dir = APP_ROOT / layer
+        if not layer_dir.exists():
+            continue
+        for pyfile in _get_python_files(layer_dir):
+            for imp in _get_imports(pyfile):
+                root = imp.split(".")[0]
+                if root in CONTAINED_CLIENTS:
+                    rel = pyfile.relative_to(APP_ROOT.parent)
+                    violations.append(f"{rel}: {root} imported outside repo/")
+    assert violations == [], "client boundary violations:\n" + "\n".join(violations)

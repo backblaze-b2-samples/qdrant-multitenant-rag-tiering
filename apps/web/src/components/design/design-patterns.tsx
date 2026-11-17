@@ -80,11 +80,11 @@ export function DesignPatterns() {
           <CardContent className="p-5">
             <EmptyState
               icon={Inbox}
-              title="No uploads yet"
-              description="Drop files in the Upload page to see them here."
+              title="No tenants yet"
+              description="Seed the demo tenants or create one from text files."
               action={
                 <Button size="sm" variant="outline">
-                  Go to Upload
+                  Go to Tenants
                 </Button>
               }
             />

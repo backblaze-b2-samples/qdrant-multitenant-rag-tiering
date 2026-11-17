@@ -8,6 +8,11 @@
 // contract. To change what is here, change the FastAPI route or Pydantic
 // model and re-run `pnpm contract:export && pnpm gen:api`.
 
+export interface BenchmarkRequest {
+  queries_per_phase?: number;
+  tenant_ids: string[];
+}
+
 /** One day's upload count, for the dashboard activity chart. */
 export interface DailyUploadCount {
   date: string;
@@ -18,6 +23,28 @@ export interface DailyUploadCount {
 export interface DeleteFileResponse {
   deleted: boolean;
   key: string;
+}
+
+export interface DeleteTenantResult {
+  collection_dropped: boolean;
+  deleted_keys: string[];
+}
+
+/**
+ * One text or Markdown document, sent as text (the browser reads the
+ * file).
+ */
+export interface DocumentIn {
+  filename: string;
+  text: string;
+}
+
+export interface DocumentInfo {
+  chunks: number;
+  filename: string;
+  /** B2 object key of the source document. */
+  key: string;
+  size_bytes: number;
 }
 
 /** One stored object as the file list and the by-key metadata route see it. */
@@ -31,71 +58,34 @@ export interface FileMetadata {
   uploaded_at: string;
   /**
    * Public object URL, set only when B2_PUBLIC_URL_BASE is configured and
-   * the bucket is public. Null otherwise — the UI asks for a presigned URL
-   * instead.
+   * the bucket is public. Null otherwise — the UI asks the API for a
+   * proxied content URL instead.
    */
   url: string | null;
 }
 
-/** Rich metadata recomputed on demand by re-reading the stored object. */
+/** Checksums recomputed on demand by re-reading the stored object. */
 export interface FileMetadataDetail {
-  /** Audio/video: bits per second. */
-  bitrate: number | null;
-  /** Audio/video: codec name. */
-  codec: string | null;
-  /** Audio/video: duration in seconds. */
-  duration_seconds: number | null;
-  /**
-   * Image-specific: EXIF tags, values stringified. Null for non-images or
-   * when no EXIF block was present.
-   */
-  exif: Record<string, string> | null;
   extension: string;
   filename: string;
-  /** Image-specific: pixel height. Null for non-images. */
-  image_height: number | null;
-  /** Image-specific: pixel width. Null for non-images. */
-  image_width: number | null;
   md5: string;
-  /**
-   * Set when a format-specific extractor was skipped or failed (e.g. an
-   * image above Pillow's decompression-bomb limit). The core fields are
-   * always exact, so the UI shows this instead of silently dropping the
-   * Image / PDF section.
-   */
-  metadata_warning: string | null;
   mime_type: string;
-  /** PDF-specific: author. */
-  pdf_author: string | null;
-  /** PDF-specific: page count. Null for non-PDFs. */
-  pdf_pages: number | null;
-  /** PDF-specific: title. */
-  pdf_title: string | null;
   sha256: string;
   size_bytes: number;
   size_human: string;
   uploaded_at: string;
 }
 
-/** The stored object as `POST /upload/verify` reports it back. */
-export interface FileUploadResponse {
-  content_type: string;
-  filename: string;
-  key: string;
-  /** Rich metadata, when extraction succeeded for this type. */
-  metadata: FileMetadataDetail | null;
-  size_bytes: number;
-  size_human: string;
-  uploaded_at: string;
-  /** Public object URL when the bucket is public, else null. */
-  url: string | null;
-}
-
-/** A short-lived presigned GET for downloading or previewing one object. */
+/**
+ * Where the browser fetches one object's bytes, through this API. No
+ * presigned B2 URL is ever handed to the browser: every byte goes through
+ * the backend's S3 client, which carries the app's custom user agent.
+ */
 export interface FileUrlResponse {
   /**
-   * Presigned GET URL. Download URLs force an attachment disposition;
-   * preview URLs are signed inline so a PDF renders in place.
+   * API-relative URL of the content proxy (`/files-by-key/content`).
+   * Download URLs ask for an attachment disposition; preview URLs ask for
+   * inline so a PDF or text file renders in place.
    */
   url: string;
 }
@@ -105,40 +95,248 @@ export interface HTTPValidationError {
 }
 
 /**
- * Liveness plus B2 reachability. The route answers HTTP 200 even when B2
- * is unreachable, so a caller must read `b2_connected` rather than
- * trusting the status code.
+ * Liveness plus B2 and Qdrant reachability. The route answers HTTP 200
+ * even when a dependency is unreachable, so a caller must read
+ * `b2_connected` and `qdrant.ok` rather than the status code.
  */
 export interface HealthStatus {
   /** True when the bucket answered a cheap head request. */
   b2_connected: boolean;
-  /** "healthy" when B2 answered, else "degraded". */
+  qdrant: QdrantHealth;
+  /** "healthy" when B2 and Qdrant answered, else "degraded". */
   status: string;
 }
 
-/** What the browser declares before uploading directly to B2. */
-export interface PresignUploadRequest {
-  content_type: string;
-  filename: string;
+export interface LatencyReport {
+  created_at: string;
+  embedding_model: string;
+  qdrant_version: string | null;
+  run_id: string;
+  tenants: TenantLatency[];
+}
+
+export interface LatencyStats {
+  mean_ms: number;
+  n: number;
+  p50_ms: number;
+  p95_ms: number;
+}
+
+export interface LibraryEntry {
+  key: string;
+  kind: string;
+  last_modified: string;
+  size_bytes: number;
+  tenant_id: string | null;
+}
+
+export interface MemoryFreed {
+  /** Observed Qdrant resident-memory drop; null when the metric is absent. */
+  node_rss_delta_bytes: number | null;
+  vector_bytes_estimate: number;
+}
+
+export interface ParkResult {
+  manifest: SnapshotManifest | null;
+  /** Observed change in Qdrant resident memory; the allocator may lag. */
+  node_rss_delta_bytes: number | null;
+  reason: string | null;
+  snapshot_upload_ms: number;
+  state: string;
+  tenant_id: string;
+  /** Estimated hot-tier bytes released (0 if not parked). */
+  vector_bytes_freed: number;
+  verified: boolean;
+}
+
+export interface PruneRequest {
+  apply?: boolean;
+  keep_last?: number;
+}
+
+export interface PruneResult {
+  applied: boolean;
+  candidates: string[];
+  deleted: string[];
+  enabled: boolean;
+}
+
+/** Reachability of the hot tier. */
+export interface QdrantHealth {
+  /** True when the Qdrant node answered. */
+  ok: boolean;
+  /** Server version reported by the node. */
+  version: string | null;
+}
+
+export interface QueryHit {
+  chunk: number;
+  doc: string;
+  score: number;
+  text: string;
+}
+
+export interface QueryRequest {
+  query: string;
+  top_k?: number;
+}
+
+export interface QueryResponse {
+  hits: QueryHit[];
+  /** Embedding plus vector search, excluding any restore. */
+  latency_ms: number;
+  restore: RestoreTiming | null;
+  restored: boolean;
+}
+
+export interface ReportSummary {
+  created_at: string;
+  run_id: string;
+  tenant_count: number;
+}
+
+export interface RestoreResult {
+  point_count: number;
+  state: string;
+  tenant_id: string;
+  timing: RestoreTiming;
+}
+
+export interface RestoreTiming {
+  download_ms: number;
+  load_ms: number;
+  total_ms: number;
+}
+
+export interface SeedRequest {
+  tenant_count?: number;
+}
+
+export interface SeedResult {
+  created: string[];
+  skipped: string[];
+}
+
+export interface SkippedTenant {
+  reason: string;
+  tenant_id: string;
+}
+
+export interface SnapshotEntry {
+  created_at: string;
+  is_latest: boolean;
+  key: string;
   size_bytes: number;
 }
 
 /**
- * A short-lived presigned PUT the browser uploads to, plus the exact
- * headers it must send. `Content-Length` and `content-type` are signed
- * into the URL, so B2 rejects a body of any other size or type.
+ * `rag/snapshots/<tenant>/latest.json`, written LAST in a park. Restore
+ * trusts nothing else: the object key, its size and sha256, and the vector
+ * configuration the points were embedded with.
  */
-export interface PresignUploadResponse {
-  content_type: string;
-  expires_in: number;
-  /**
-   * Signed into the URL, so the browser must send them verbatim — B2
-   * answers a mismatch with 403.
-   */
-  headers: Record<string, string>;
-  key: string;
-  method: string;
-  url: string;
+export interface SnapshotManifest {
+  created_at: string;
+  distance: string;
+  embedding_model: string;
+  /** Payload bytes recorded at ingest, for the memory estimate. */
+  payload_bytes: number;
+  point_count: number;
+  qdrant_version: string | null;
+  sha256: string;
+  size_bytes: number;
+  snapshot_id: string;
+  snapshot_key: string;
+  tenant_id: string;
+  vector_size: number;
+}
+
+export interface TenantCreate {
+  display_name: string;
+  documents: DocumentIn[];
+  /** Lowercase letters, digits and hyphens, 2 to 40 characters. */
+  tenant_id: string;
+}
+
+export interface TenantDetail {
+  created_at: string;
+  display_name: string;
+  document_count: number;
+  documents: DocumentInfo[];
+  /** In-memory; resets when the API restarts. */
+  last_query_at: string | null;
+  manifest: SnapshotManifest | null;
+  point_count: number;
+  snapshot_created_at: string | null;
+  snapshot_size_bytes: number | null;
+  /** True when documents changed after the latest snapshot was taken. */
+  snapshot_stale: boolean;
+  state: string;
+  tenant_id: string;
+  /** points * vector_size * 4 plus payload bytes: the hot-tier footprint. */
+  vector_bytes_estimate: number;
+}
+
+export interface TenantLatency {
+  first_query_after_restore_ms: number;
+  memory_freed: MemoryFreed;
+  point_count: number;
+  post_restore: LatencyStats;
+  restore: RestoreTiming;
+  /** Post-restore hits equal warm hits (same ids, scores within 1e-4). */
+  results_match: boolean;
+  snapshot_bytes: number;
+  snapshot_upload_ms: number;
+  tenant_id: string;
+  warm: LatencyStats;
+}
+
+/** One row of the tenants table. State is derived, never stored. */
+export interface TenantSummary {
+  display_name: string;
+  document_count: number;
+  /** In-memory; resets when the API restarts. */
+  last_query_at: string | null;
+  point_count: number;
+  snapshot_created_at: string | null;
+  snapshot_size_bytes: number | null;
+  state: string;
+  tenant_id: string;
+  /** points * vector_size * 4 plus payload bytes: the hot-tier footprint. */
+  vector_bytes_estimate: number;
+}
+
+export interface TenantUpdate {
+  add_documents?: DocumentIn[];
+  display_name?: string | null;
+  remove_documents?: string[];
+}
+
+export interface TieringPolicy {
+  idle_seconds: number;
+  prune_enabled: boolean;
+  sweep_interval_seconds: number;
+}
+
+export interface TieringRunRequest {
+  dry_run?: boolean;
+  idle_seconds?: number | null;
+}
+
+export interface TieringRunResult {
+  candidates: string[];
+  dry_run: boolean;
+  parked: string[];
+  skipped: SkippedTenant[];
+}
+
+export interface TieringStats {
+  corpus_bytes_b2: number;
+  empty: number;
+  hot: number;
+  parked: number;
+  snapshot_bytes_b2: number;
+  vector_bytes_freed: number;
+  vector_bytes_hot: number;
 }
 
 /** Aggregate bucket figures behind the dashboard stat cards. */
@@ -156,9 +354,4 @@ export interface ValidationError {
   loc: (string | number)[];
   msg: string;
   type: string;
-}
-
-/** Sent after the direct PUT so the API can inspect the stored object. */
-export interface VerifyUploadRequest {
-  key: string;
 }

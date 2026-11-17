@@ -73,11 +73,13 @@ thing to go look at, not the boot.
 - **Integration**: HTTP handlers, B2 connectivity (`tests/`)
 - **Structural**: layering rules, import boundaries (`tests/test_structure.py`)
 - **Contract**: checked-in OpenAPI artifact and frontend route drift
-- **E2E**: Playwright browser-driven smoke tests
+- **E2E**: Playwright browser-driven smoke tests (`apps/web/e2e/tenants.spec.ts`: seed, query, park, query restores)
+- **Tiering end-to-end**: `pnpm test:e2e:tiering`, real Docker Qdrant nodes and a real B2 bucket (see below)
 - **App verification**: throwaway, app-specific Playwright specs that drive a real browser through a real run
 
 ## Test placement
-- Backend: `services/api/tests/`
+- Backend: `services/api/tests/` (offline: in-memory B2, Qdrant and embedder fakes in `tests/fakes.py`, behind the same ports as `app/repo/`)
+- Backend live: `services/api/live_tests/` (`test_b2_connectivity.py`, `test_e2e_tiering.py`)
 - E2E: `apps/web/e2e/` with config in `apps/web/playwright.config.ts`
 - App verification specs: `apps/web/e2e/verify/` (gitignored), sharing the fixtures in `apps/web/e2e/fixtures/`
 
@@ -370,11 +372,42 @@ by `scripts/dev.sh`.
 so no gate in `pnpm verify` typechecks them; type errors there only surface
 when `pnpm test:e2e` runs.
 
+## Tiering end-to-end (Docker + B2)
+
+`pnpm test:e2e:tiering` is the end-to-end proof of the primary feature. It sets
+`RUN_E2E_TIERING=1` and runs `services/api/live_tests/test_e2e_tiering.py`
+(marker `e2e`). Prerequisites: a running Docker daemon and the four required
+`B2_*` values in the repo-root env file; the first run also downloads the
+embedding model (about 67 MB). Without the flag the test skips; with the flag
+and a missing prerequisite it fails and says which.
+
+What it does:
+
+1. Starts a Qdrant container from the image pinned in `docker-compose.yml`
+   (random localhost port, empty storage) and points `RAG_PREFIX` at
+   `e2e/<uuid>/rag/`.
+2. Creates two tenants through the API (real fastembed embeddings, corpus
+   written to B2) and records query results.
+3. Parks one tenant through `POST /tiering/run` with a seconds-level idle
+   threshold; the other stays hot.
+4. Starts a second, fresh Qdrant container and points the API at it; the next
+   query restores the tenant from B2 into it and must return the same hit ids
+   and scores (within 1e-4).
+5. Runs a benchmark and checks `report.json` exists in B2 with warm and
+   post-restore figures.
+6. Deletes exactly the keys it recorded writing, asserts `e2e/<uuid>/` is
+   empty, and removes both containers (also on failure).
+
+It is not part of `pnpm verify` or CI because it needs Docker and live
+credentials.
+
 ## When to run
 - After behavior change: run relevant subset
 - Before PR: run `pnpm verify`
 - Before PRs that affect browser flows or live-service behavior: run
   `pnpm verify:full` when the prerequisites above are available
+- Before PRs that touch parking, restore, snapshots, the Qdrant gateway or the
+  B2 object store: run `pnpm test:e2e:tiering`
 
 ## Continuous Integration
 - `.github/workflows/ci.yml` runs `pnpm check:agent-docs` plus the two halves
@@ -382,8 +415,9 @@ when `pnpm test:e2e` runs.
   on every PR and push to `main`. Same gates as running `pnpm verify` locally,
   but they report independently, so a frontend failure never hides a backend
   failure.
-- No secrets required — backend tests deny socket access and mock the B2 repo
-  layer, including explicit healthy/degraded `/health` cases. `pnpm verify:full`
+- No secrets required — backend tests deny socket access and run against
+  in-memory fakes of B2, Qdrant and the embedder, including explicit
+  healthy/degraded `/health` cases. `pnpm verify:full`
   and E2E are not in CI
   because they need a running app, browser install, and live B2 credentials.
 - The workflow declares `permissions: contents: read` at the top level, so

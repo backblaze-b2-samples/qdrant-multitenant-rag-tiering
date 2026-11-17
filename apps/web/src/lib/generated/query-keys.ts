@@ -28,4 +28,12 @@ export const qk = {
   stats: () => [...qk.all, "stats"] as const,
   uploadActivity: (days?: number) => [...qk.all, "stats", "activity", days ?? 7] as const,
   health: () => [...qk.all, "health"] as const,
+  library: (tenant_id?: string, kind?: string) => [...qk.all, "library", tenant_id, kind] as const,
+  reports: () => [...qk.all, "reports"] as const,
+  report: () => [...qk.all, "reports", "detail"] as const,
+  tenants: () => [...qk.all, "tenants"] as const,
+  tenant: () => [...qk.all, "tenants", "detail"] as const,
+  tenantSnapshots: () => [...qk.all, "tenants", "snapshots"] as const,
+  tieringPolicy: () => [...qk.all, "tiering", "policy"] as const,
+  tieringStats: () => [...qk.all, "tiering", "stats"] as const,
 };

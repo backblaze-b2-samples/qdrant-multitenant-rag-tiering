@@ -1,70 +1,99 @@
-<!-- last_verified: 2026-08-06 -->
+<!-- last_verified: 2026-11-17 -->
 # Reliability
 
 Reliability expectations and practices for this project.
 
+## Verify Before Park
+
+The one rule that protects tenant data: a collection is dropped only after its
+snapshot is safely in B2 and checked.
+
+1. Qdrant creates the snapshot and reports its sha256 checksum.
+2. The snapshot streams into a B2 multipart upload, hashed on the way; the hash
+   must equal Qdrant's checksum. Any failure aborts the multipart upload, so no
+   partial object ever becomes visible.
+3. `latest.json` is written **last**. A previously good manifest is never
+   overwritten before the new snapshot object is fully uploaded.
+4. Verification reads B2 back: `head_object` size, then a streamed re-read
+   sha256, both against the manifest.
+5. Only then are the node-local snapshot and the collection deleted.
+
+Any failure in steps 1-4 leaves the tenant hot: the previous manifest is put
+back (or the new one removed), the unverified object is deleted, the reason is
+logged at WARNING and returned (a sweep lists it under `skipped`). Each failure
+mode (upload error, size mismatch, checksum mismatch) has its own test in
+`tests/test_park_restore_state_machine.py`.
+
+## Restore Integrity
+
+- The snapshot is hashed while it streams from B2; a size or sha256 mismatch with
+  the manifest refuses the load (502).
+- Qdrant's upload API is also given the checksum.
+- The restored point count must equal the manifest's, or the collection is dropped
+  again and the tenant stays parked.
+- A manifest built with another embedding model or vector size is refused (409)
+  instead of returning wrong neighbours.
+
+## Concurrency
+
+- One `asyncio.Lock` per tenant serialises park, restore, edit, delete and query.
+  A query that arrives mid-park waits, then restores from the snapshot the park just
+  verified (tested).
+- The background sweep re-checks idleness under the lock, so a tenant queried after
+  selection is skipped rather than parked.
+- Blocking B2 and Qdrant calls run in worker threads (`asyncio.to_thread`); the
+  event loop keeps serving other tenants.
+
 ## Health Checks
 
-- `GET /health` verifies B2 connectivity and returns `healthy` or `degraded`
-- Health endpoint is always available, even when B2 is down
+- `GET /health` reports `b2_connected` and `qdrant {ok, version}`; `status` is
+  `healthy` only when both answer. It is always HTTP 200, so read the fields.
 - The B2 client bounds connection attempts to 5 seconds, socket reads to 30
-  seconds, and standard retries to 3 total attempts. Normal tests mock this
-  boundary and deny network access; real connectivity is opt-in through
-  `RUN_LIVE_B2_TESTS=1 pnpm test:live:b2`.
+  seconds, and standard retries to 3 total attempts.
+- The web app shows a banner when B2 or Qdrant is unreachable.
 
 ## Error Handling
 
-- HTTP handlers return structured error responses with appropriate status codes
-- External service failures (B2) are caught and surfaced as 500/503 responses
-- No unhandled exceptions leak stack traces to clients
-- Uncaught exceptions are converted to a typed JSON 500 (`{"detail": "Internal server error"}`, modeled by `app.types.ErrorResponse`) by the catch-all in `timing_middleware`
-- **Error responses carry CORS headers.** `CORSMiddleware` is registered LAST in `main.py` so it is the outermost middleware and wraps every response — including uncaught-exception 500s produced by the inner catch-all. This is intentional and load-bearing: if a 500 shipped without `Access-Control-Allow-Origin`, the browser would block it and the frontend would surface only an opaque "network error", hiding the real server bug. Regression-guarded by `tests/test_error_handling.py::test_unhandled_exception_500_carries_cors_headers`.
+- Service errors carry their HTTP status (`app/service/errors.py`): 400 invalid input, 404 not found, 409 conflict (duplicate tenant, model mismatch, prune disabled, park failed during a benchmark), 502 storage or integrity failure
+- Uncaught exceptions become a typed JSON 500 (`{"detail": "Internal server error"}`) in `timing_middleware`
+- **Error responses carry CORS headers.** `CORSMiddleware` is registered LAST in `main.py` so it wraps every response, including the catch-all 500. Regression-guarded by `tests/test_error_handling.py::test_unhandled_exception_500_carries_cors_headers`.
 
 ## Logging
 
-- Structured JSON logging via Python stdlib
-- Every request gets a `request_id` for tracing
-- Log levels: ERROR for failures, WARNING for degraded state, INFO for requests
+- Structured JSON logging via Python stdlib, with a `request_id` per request
+- ERROR for failures, WARNING for aborted parks and degraded state, INFO for requests and sweeps that found candidates
 
 ## Observability
 
-- Request timing middleware logs duration for every request
-- `/metrics` endpoint exposes basic Prometheus-format counters
-- Upload success/failure counts tracked
+- `/metrics` exposes request counts and durations plus `tenant_parks_total` and `tenant_restores_total`
+- Latency reports in B2 record warm, restore and post-restore latency and memory freed per run
 
 ## Stateful Counters — durability caveats
 
-The download counter and the `/metrics` counters are **in-process, per replica**. Consequences to plan for before scaling:
+The download counter, the `/metrics` counters, the per-tenant idle clocks and the transitional states are **in-process, per replica**:
 
-- **Download counter** (`app/repo/counter.py`) persists to a JSON file at `DOWNLOAD_COUNT_FILE` (default `.data/download_count.json`, resolved from the repo root — deliberately outside `services/api/`, which `uvicorn --reload` watches, so a download never writes into the dev reloader's watch tree). On an ephemeral filesystem (Railway without a mounted volume or Vercel Functions) it **resets to 0 on every redeploy**. With multiple replicas or Function instances each keeps its own file/count. For durable, shared counts: mount a persistent volume or swap the adapter for Redis/DB.
-- **`/metrics` counters** live in process memory and reset on restart. Behind a load balancer, each replica reports only its own slice — scrape with an instance label and aggregate, or push to a shared collector.
+- **Idle clocks** reset on restart to the process start time, which can only delay parking, never park early. Tenant state itself is never lost: it is derived from Qdrant collections and B2 manifests.
+- **Download counter** (`app/repo/counter.py`) persists to `DOWNLOAD_COUNT_FILE` (default `.data/download_count.json`); in a container without a volume it resets on every restart.
+- **`/metrics` counters** reset on restart.
+- Running more than one API replica against one Qdrant node is unsupported: the locks are per process.
 
 ## Rate Limiting
 
-- Per-IP fixed-window limiter (`app/runtime/ratelimit.py`); `RATE_LIMIT_PER_MINUTE` / `RATE_LIMIT_WRITE_PER_MINUTE` are the budgets. Rejected requests get `429` with a `Retry-After` header.
-- Counters are in-process per replica; horizontal scaling needs a shared store (e.g. Redis) for a global limit.
+- Per-IP fixed-window limiter; `RATE_LIMIT_PER_MINUTE` / `RATE_LIMIT_WRITE_PER_MINUTE`. Rejected requests get `429` with `Retry-After`.
 
 ## Graceful Degradation
 
-- File listing returns empty list (not error) when B2 has no objects
-- Metadata extraction failures don't block upload (return partial metadata)
-- Frontend shows skeleton states while loading, error states on failure — and, for the bucket-listing waits that can run for seconds, on-screen copy that escalates instead of silent skeletons (`lib/loading-progress.ts`)
-- A full bucket listing (needed by both `/files` and `/files/stats`) is cached, warmed at startup, and served **stale-while-revalidate**: after the first scan, an expired entry is returned immediately while a background thread refreshes it, so a slow or failing B2 list never turns into a user-visible 8-20s wait. `LIST_CACHE_TTL_SECONDS` (default 300) bounds staleness for changes made outside this app; the app's own uploads and deletes invalidate the cache outright. A failed background refresh keeps serving the previous snapshot and is logged
-- `WARM_LIST_CACHE_ON_STARTUP=false` skips the startup scan (offline dev, or when startup must not touch B2)
+- B2 unreachable: the explorer and tenant pages show error states; parks fail safe (tenant stays hot)
+- Qdrant unreachable: health is degraded, tenant routes fail with an error, nothing is deleted from B2
+- Embedding model download fails at startup: logged; the first ingest or query retries the load
+- The bucket explorer's full listing is cached, warmed at startup and served stale-while-revalidate (`LIST_CACHE_TTL_SECONDS`, default 300)
 
 ## Deployment
 
-- The API contracts check `/health`; it confirms process readiness, but the
-  response is still HTTP 200 when B2 is degraded. Promotion therefore also
-  requires `b2_connected: true` and an affected-flow smoke test.
-- Railway uses a persistent service model; Vercel runs the API as a Function.
-  On Vercel, set `WARM_LIST_CACHE_ON_STARTUP=false` to avoid a cold-start bucket
-  scan. Uploads go directly from the browser to B2 (presigned PUT), so they no
-  longer pass through the Function and Vercel's 4.5 MB payload ceiling does not
-  apply — `MAX_FILE_SIZE` can stay at the 100 MB default. The bucket must allow
-  the deploy origin in its CORS (see infra/vercel/README.md).
-- See [infra/railway/README.md](../infra/railway/README.md) or
-  [infra/vercel/README.md](../infra/vercel/README.md) for the selected
-  platform's versioned configuration, approval, rollback, and cleanup procedure.
-- Environment-specific configuration uses platform variables; no environment
-  values are committed to the repository.
+- Docker Compose is the supported runtime. Named volumes keep Qdrant storage and
+  the fastembed model cache across restarts; `docker compose down -v` deletes them
+  (hot tenants that were never parked lose their vectors, but their corpus stays in
+  B2 and can be re-ingested by editing the tenant).
+- The Qdrant image is pinned (`qdrant/qdrant:v1.20.2`). After changing it, run
+  `docker compose down -v` before `up`, and bump `qdrant-client` to the same minor.
+- Environment-specific configuration uses environment variables; no values are committed.

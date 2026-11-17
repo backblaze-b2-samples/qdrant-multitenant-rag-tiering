@@ -1,4 +1,5 @@
 import socket
+from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -74,8 +75,8 @@ def reset_shared_module_state():
     with metrics._lock:
         metrics._request_count.clear()
         metrics._request_duration_sum.clear()
-        metrics._upload_count = 0
-        metrics._upload_errors = 0
+        metrics._park_count = 0
+        metrics._restore_count = 0
     yield
     cached_get_s3_client.cache_clear()
 
@@ -92,3 +93,26 @@ def isolate_download_counter(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "download_count_file", str(counter_path))
     monkeypatch.setattr(counter, "_count", 0)
     yield
+
+
+@pytest.fixture(autouse=True)
+def rag():
+    """Install in-memory B2 / Qdrant / embedder fakes behind the service ports.
+
+    Autouse so no test can reach a real backend by accident; tests that need
+    the fakes take this fixture to inspect or tweak them. The per-tenant locks
+    and activity clocks are reset too, so state never leaks across tests.
+    """
+    from app.service import deps, state
+    from tests.fakes import FakeEmbedder, FakeGateway, FakeStore
+
+    backends = SimpleNamespace(
+        store=FakeStore(), gateway=FakeGateway(), embedder=FakeEmbedder()
+    )
+    deps.set_backends(
+        store=backends.store, gateway=backends.gateway, embedder=backends.embedder
+    )
+    state.reset()
+    yield backends
+    deps.reset_backends()
+    state.reset()

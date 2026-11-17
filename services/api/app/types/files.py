@@ -19,14 +19,14 @@ class FileMetadata(ResponseModel):
         default=None,
         description=(
             "Public object URL, set only when B2_PUBLIC_URL_BASE is configured "
-            "and the bucket is public. Null otherwise — the UI asks for a "
-            "presigned URL instead."
+            "and the bucket is public. Null otherwise — the UI asks the API "
+            "for a proxied content URL instead."
         ),
     )
 
 
 class FileMetadataDetail(ResponseModel):
-    """Rich metadata recomputed on demand by re-reading the stored object."""
+    """Checksums recomputed on demand by re-reading the stored object."""
 
     filename: str
     size_bytes: int
@@ -36,48 +36,20 @@ class FileMetadataDetail(ResponseModel):
     md5: str
     sha256: str
     uploaded_at: datetime
-    metadata_warning: str | None = Field(
-        default=None,
-        description=(
-            "Set when a format-specific extractor was skipped or failed (e.g. "
-            "an image above Pillow's decompression-bomb limit). The core "
-            "fields are always exact, so the UI shows this instead of "
-            "silently dropping the Image / PDF section."
-        ),
-    )
-    image_width: int | None = Field(
-        default=None, description="Image-specific: pixel width. Null for non-images."
-    )
-    image_height: int | None = Field(
-        default=None, description="Image-specific: pixel height. Null for non-images."
-    )
-    exif: dict[str, str] | None = Field(
-        default=None,
-        description=(
-            "Image-specific: EXIF tags, values stringified. Null for "
-            "non-images or when no EXIF block was present."
-        ),
-    )
-    pdf_pages: int | None = Field(
-        default=None, description="PDF-specific: page count. Null for non-PDFs."
-    )
-    pdf_author: str | None = Field(default=None, description="PDF-specific: author.")
-    pdf_title: str | None = Field(default=None, description="PDF-specific: title.")
-    duration_seconds: float | None = Field(
-        default=None, description="Audio/video: duration in seconds."
-    )
-    codec: str | None = Field(default=None, description="Audio/video: codec name.")
-    bitrate: int | None = Field(default=None, description="Audio/video: bits per second.")
 
 
 class FileUrlResponse(ResponseModel):
-    """A short-lived presigned GET for downloading or previewing one object."""
+    """Where the browser fetches one object's bytes, through this API.
+
+    No presigned B2 URL is ever handed to the browser: every byte goes through
+    the backend's S3 client, which carries the app's custom user agent.
+    """
 
     url: str = Field(
         description=(
-            "Presigned GET URL. Download URLs force an attachment "
-            "disposition; preview URLs are signed inline so a PDF renders in "
-            "place."
+            "API-relative URL of the content proxy (`/files-by-key/content`). "
+            "Download URLs ask for an attachment disposition; preview URLs ask "
+            "for inline so a PDF or text file renders in place."
         )
     )
 

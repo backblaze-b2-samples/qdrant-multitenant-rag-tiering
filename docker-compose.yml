@@ -1,0 +1,51 @@
+# Full stack: Qdrant hot tier + FastAPI + Next.js. `docker compose up --build`
+# (needs the repo-root env file with your B2 credentials; see .env.example).
+# Local dev without Compose: `docker compose up qdrant` plus `pnpm dev`.
+name: qdrant-multitenant-rag-tiering
+
+services:
+  qdrant:
+    # Pinned to the newest stable release verified at build time; qdrant-client
+    # in services/api/requirements.txt is held to the same minor (1.20).
+    image: qdrant/qdrant:v1.20.2
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant-storage:/qdrant/storage
+
+  api:
+    image: qdrant-multitenant-rag-tiering-api
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      # fastembed's own cache variable: the ~67 MB model downloads once.
+      FASTEMBED_CACHE_PATH: /models
+      API_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8000:8000"
+    volumes:
+      - model-cache:/models
+    depends_on:
+      - qdrant
+
+  web:
+    image: qdrant-multitenant-rag-tiering-web
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Inlined by Next.js at build time: the browser calls the API here.
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  qdrant-storage:
+  model-cache:

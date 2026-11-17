@@ -6,8 +6,7 @@ export default function SettingsPage() {
       <div className="animate-fade-in border-b border-border pb-5">
         <h1 className="page-title">Settings</h1>
         <p className="text-sm text-muted-foreground mt-1.5">
-          Configure preferences for this workspace. There is no account system
-          yet, so these are saved in this browser only.
+          The tiering policy the API is running with, and this browser&apos;s theme.
         </p>
       </div>
       <div className="animate-fade-in-up stagger-2 max-w-3xl">

@@ -1,82 +1,53 @@
-<!-- last_verified: 2026-07-28 -->
+<!-- last_verified: 2026-11-17 -->
 # Feature: Settings
 
 ## Purpose
-Show what a settings page can look like when you build on this starter kit — a
-profile, notification/quota preferences, and a default view — while being
-explicit that only the preferences the kit can actually honour do anything. Today
-that is Theme; the rest is a labelled demonstration.
+Show the tiering policy the API is actually running with, and let the user pick
+a theme. The policy is server configuration, so it is read-only here.
 
 ## Used By
-- UI: `/settings` page (`SettingsForm`, `DangerZone`)
-- API: none. There is no account system
-- Storage: `next-themes`' own key for Theme; `localStorage` (`vibe-demo-preferences`) for the demo fields. The app has no server-side preferences store
+- UI: `/settings` page (`SettingsForm`, `PolicyCard`)
+- API: `GET /tiering/policy`
+- Storage: `next-themes`' own key for the theme. No server-side preferences store
 
 ## Core Functions
-- `apps/web/src/lib/theme-preference.ts` — `THEME_OPTIONS`, `DEFAULT_THEME`, `isThemeOption()`, `normalizeTheme()`; the one real preference
-- `apps/web/src/lib/demo-preferences.ts` — `DemoPreferences`, `DEMO_PREFERENCES_DEFAULTS`, `loadDemoPreferences()`, `saveDemoPreferences()`; localStorage persistence for the illustrative fields
-- `apps/web/src/components/settings/settings-form.tsx` — the form; a demo banner, the real Theme control, and the demo Profile/Preferences fields
-- `apps/web/src/lib/settings-schema.ts`: the form's validation rules and messages (zod), unit-tested in `settings-schema.test.ts`
-- `apps/web/src/components/layout/theme-provider.tsx` — `next-themes` provider (the single owner of the theme)
-- `apps/web/src/components/settings/danger-zone.tsx` — destructive bucket actions (demo — no real delete runs)
+- `apps/web/src/components/settings/settings-form.tsx` — read-only policy card plus the theme form
+- `apps/web/src/lib/settings-schema.ts` — zod schema (theme only), unit-tested in `settings-schema.test.ts`
+- `apps/web/src/lib/theme-preference.ts` — `THEME_OPTIONS`, `DEFAULT_THEME`, `normalizeTheme()`
+- `services/api/app/service/tiering.py` — `get_policy()`
 
 ## Canonical Files
-- Honoured-preference pattern: `apps/web/src/lib/theme-preference.ts`
-- Demo-preference pattern: `apps/web/src/lib/demo-preferences.ts`
+- Pattern exemplar (selector for finite options, description hints): `apps/web/src/components/settings/settings-form.tsx`
 
 ## Inputs
-- theme: `"light" | "dark" | "system"` (real)
-- displayName, bio, defaultView (`tree | list | grid`), emailOnUpload, warnNearQuota, quotaThreshold (demo)
+- Theme: `light` | `dark` | `system` (radio group)
 
 ## Outputs
-- Side effect (real): theme applied immediately via `setTheme()`, persisted under `next-themes`' key
-- Side effect (demo): the other fields written to `localStorage` only, never sent anywhere
-- Toast: success naming that theme was applied and the demo values were stored in this browser; a warning toast instead when the browser blocks storage (theme still changes)
+- `TieringPolicy {idle_seconds, sweep_interval_seconds, prune_enabled}`, each shown with the
+  environment variable that sets it (`TIERING_IDLE_SECONDS`, `TIERING_SWEEP_INTERVAL_SECONDS`,
+  `SNAPSHOT_PRUNE_ENABLED`)
+- Side effect: theme applied and persisted in this browser
 
 ## Flow
-- Page mounts → the form hydrates once: Theme from `next-themes` (the live value, so the header toggle and this form always agree), the demo fields from their `localStorage` blob
-- Submit → `setTheme(theme)` applies and persists the theme; `saveDemoPreferences()` stores the rest locally; the toast reports honestly what happened
-- Reload → the theme comes back, and so do the demo values (from localStorage)
+- The policy loads from the API and is displayed; changing it means editing the API
+  environment and restarting the API. A browser toggle that did not change what the
+  background sweep does would misrepresent the system.
+- Saving the theme applies it immediately; the header toggle drives the same state.
 
 ## Edge Cases
-- `next-themes` reports `undefined` during the first client paint → the form waits for the resolved value before hydrating
-- Unknown / stale stored theme value → `normalizeTheme()` falls back to `system`
-- Corrupt / partial demo blob → `loadDemoPreferences()` falls back to defaults field by field, never throws
-- Storage blocked (private mode / quota) → `saveDemoPreferences()` returns `false`; the form shows a warning toast rather than a false success
-- SSR / no `window` → defaults, no throw
+- API down -> the policy card shows its skeleton; theme still works
+- Sweep interval `0` -> shown as "disabled"
 
-## Demo vs real — the design rule
-The page is a **showcase**, so it deliberately keeps illustrative controls, but
-it must never let a demo control *look* real:
-
-- A banner at the top states plainly that only Theme is wired up, and that the
-  Profile / notification / quota / default-view fields are placeholders that
-  save to the browser but drive no behaviour.
-- Every demo field's description says "Demo field."
-- The save toast distinguishes the real theme change from the locally-stored
-  demo values, and never claims a save that did not happen.
-
-This is the fix for the original defect: the same fields used to persist nothing
-and toast "Settings saved", i.e. the app reported success for behaviour that
-could never happen, with no hint the controls were inert. Keep the showcase, but
-keep it honest. When you make one of these real, wire it to its backing surface
-(a mailer, a quota banner, an activity log / share link, real List and Grid
-views plus a switcher) and drop the "Demo field" wording in the same change.
-
-## UX States
-- Loading: the form shows defaults for one frame, then resets to the live theme + stored demo values
-- Saved: success toast (theme applied + demo values stored locally)
-- Storage blocked: warning toast (theme applied, demo values not persisted)
-- Invalid: inline field errors (e.g. display name < 2 chars, quota threshold outside 50–95)
+## UX States (if applicable)
+- Loading: skeleton in the policy card
+- Error: the global health banner explains a down API or Qdrant
 
 ## Verification
-- Test files: `apps/web/src/lib/theme-preference.test.ts`, `apps/web/src/lib/demo-preferences.test.ts`
-- Required cases: the offered theme set is exactly what `setTheme()` accepts and unknown values fall back to `system`; demo preferences round-trip through localStorage, fall back field-by-field on a partial/corrupt blob, and report `false` when storage is unavailable
+- Test files: `apps/web/src/lib/settings-schema.test.ts`, `services/api/tests/test_tiering_policy.py::test_policy_reports_configuration`
 - Focused verify command: `pnpm test:web`
 - Default pre-PR verify command: `pnpm verify`
-- Full local verify command: `pnpm verify:full` when the E2E/live prerequisites in [Verification](../verification.md#non-live-verification) are available
-- Pass criteria: focused tests and `pnpm verify` green; saving theme = dark leaves `html.class="dark"` and survives a reload; the demo banner is present and every demo field is labelled as such
+- Pass criteria: the schema accepts the three themes and rejects others; the policy endpoint returns its three fields
 
 ## Related Docs
-- [App Workflows](../app-workflows.md)
-- [ARCHITECTURE.md](../../ARCHITECTURE.md)
+- [Tiering](tiering.md)
+- [README.md](../../README.md)

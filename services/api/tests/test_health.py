@@ -34,7 +34,19 @@ async def test_health_reports_connectivity(
     assert response.json() == {
         "status": expected_status,
         "b2_connected": b2_connected,
+        "qdrant": {"ok": True, "version": "1.20.2"},
     }
+
+
+@pytest.mark.asyncio
+async def test_health_degraded_when_qdrant_unreachable(client, monkeypatch, rag):
+    monkeypatch.setattr(health_runtime, "check_connectivity", lambda: True)
+    monkeypatch.setattr(rag.gateway, "version", lambda: None)
+
+    body = (await client.get("/health")).json()
+
+    assert body["status"] == "degraded"
+    assert body["qdrant"] == {"ok": False, "version": None}
 
 
 def test_s3_client_has_bounded_network_waits(monkeypatch):
@@ -60,4 +72,5 @@ async def test_metrics_returns_200(client):
     response = await client.get("/metrics")
     assert response.status_code == 200
     assert "http_requests_total" in response.text
-    assert "uploads_total" in response.text
+    assert "tenant_parks_total" in response.text
+    assert "tenant_restores_total" in response.text

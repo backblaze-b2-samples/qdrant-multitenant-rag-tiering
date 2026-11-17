@@ -1,18 +1,17 @@
 "use client";
 
-import { FileIcon, HardDrive, Upload, Download } from "lucide-react";
+import { Archive, Boxes, Cpu, Database, FileText, MemoryStick } from "lucide-react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
-import { LoadingNotice } from "@/components/common/loading-notice";
-import { useFileStats } from "@/lib/queries";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useTieringStats } from "@/lib/queries";
+import { humanizeBytes } from "@/lib/utils";
 
+/** Where each tenant lives now, and what that costs in vector memory. */
 export function StatsCards() {
-  const { data: stats, isLoading, error, refetch } = useFileStats();
+  const { data: stats, isLoading, error, refetch } = useTieringStats();
 
-  // Surface fetch failures inline rather than rendering "0 files / 0 B" —
-  // that lies to the user about the bucket state when really the API is
-  // just unreachable.
   if (error) {
     return (
       <Card>
@@ -24,44 +23,46 @@ export function StatsCards() {
   }
 
   const cards = [
-    { title: "Total Files", value: stats?.total_files ?? 0, icon: FileIcon },
-    { title: "Storage Used", value: stats?.total_size_human ?? "0 B", icon: HardDrive },
-    { title: "Uploads Today", value: stats?.uploads_today ?? 0, icon: Upload },
-    { title: "Total Downloads", value: stats?.total_downloads ?? 0, icon: Download },
+    { title: "Hot tenants", value: stats ? String(stats.hot) : "", icon: Cpu },
+    { title: "Parked in B2", value: stats ? String(stats.parked) : "", icon: Archive },
+    { title: "Empty", value: stats ? String(stats.empty) : "", icon: Boxes },
+    {
+      title: "Vector memory in use (est.)",
+      value: stats ? humanizeBytes(stats.vector_bytes_hot) : "",
+      icon: MemoryStick,
+    },
+    {
+      title: "Vector memory freed (est.)",
+      value: stats ? humanizeBytes(stats.vector_bytes_freed) : "",
+      icon: MemoryStick,
+    },
+    {
+      title: "Snapshots in B2",
+      value: stats ? humanizeBytes(stats.snapshot_bytes_b2) : "",
+      icon: Database,
+    },
+    {
+      title: "Corpus in B2",
+      value: stats ? humanizeBytes(stats.corpus_bytes_b2) : "",
+      icon: FileText,
+    },
   ];
 
   return (
-    <>
-      {/* Stats need a full bucket listing, which measured ~8s on a 16k-object
-          bucket. Four blank skeleton cards said nothing about that; this states
-          it in words and escalates if the wait keeps going. */}
-      {isLoading && (
-        <LoadingNotice className="mb-3" subject="bucket stats" />
-      )}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card, i) => (
-          <Card
-            key={card.title}
-            className={`card-hover animate-fade-in-up stagger-${i + 1}`}
-          >
-            <CardHeader className="flex flex-row items-center justify-between pt-4 pb-2 px-4 space-y-0">
-              <CardTitle className="text-xs font-semibold text-muted-foreground">
-                {card.title}
-              </CardTitle>
-              <div className="stat-icon-wrap">
-                <card.icon className="h-4 w-4" />
-              </div>
-            </CardHeader>
-            <CardContent className="pb-5 px-4">
-              {isLoading ? (
-                <Skeleton className="h-8 w-24" />
-              ) : (
-                <div className="stat-value">{card.value}</div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+      {cards.map((card, i) => (
+        <Card key={card.title} className={`card-hover animate-fade-in-up stagger-${Math.min(i + 1, 6)}`}>
+          <CardHeader className="flex flex-row items-center justify-between pt-4 pb-2 px-4 space-y-0">
+            <CardTitle className="text-xs font-semibold text-muted-foreground">{card.title}</CardTitle>
+            <div className="stat-icon-wrap">
+              <card.icon className="h-4 w-4" />
+            </div>
+          </CardHeader>
+          <CardContent className="pb-5 px-4">
+            {isLoading ? <Skeleton className="h-8 w-20" /> : <div className="stat-value">{card.value}</div>}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }

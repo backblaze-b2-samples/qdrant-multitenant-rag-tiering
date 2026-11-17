@@ -7,7 +7,9 @@ import {
   getFile,
   getFileDetail,
   getPreviewUrl,
-  uploadFile,
+  parkTenant,
+  resolveApiUrl,
+  routePath,
 } from "./api-client";
 
 type FileKeyOperation = {
@@ -214,63 +216,45 @@ describe("getFileDetail", () => {
   });
 });
 
-// A blocked browser→B2 PUT is the one failure a deployer hits first, and XHR
-// reports it as a contentless `error` event. The message therefore has to name
-// bucket CORS: pointing at the API instead sends people to a clean 200 in the
-// API log and wastes the debugging session.
-describe("uploadFile — direct-to-B2 PUT failure", () => {
-  class BlockedXhr {
-    static instances: BlockedXhr[] = [];
-    upload = { addEventListener: vi.fn() };
-    private handlers: Record<string, (() => void)[]> = {};
-    status = 0;
-
-    constructor() {
-      BlockedXhr.instances.push(this);
-    }
-
-    addEventListener(event: string, handler: () => void) {
-      (this.handlers[event] ??= []).push(handler);
-    }
-
-    open = vi.fn();
-    setRequestHeader = vi.fn();
-
-    send() {
-      // What the browser does when the bucket's CORS rejects the origin.
-      for (const handler of this.handlers.error ?? []) handler();
-    }
-  }
-
-  beforeEach(() => {
-    BlockedXhr.instances = [];
-    vi.stubGlobal("XMLHttpRequest", BlockedXhr);
-  });
-
-  it("blames bucket CORS, not the API", async () => {
+describe("content-proxy URLs", () => {
+  it("resolves API-relative preview URLs against the API base", async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonResponse({
-        headers: { "Content-Type": "text/plain" },
-        key: "uploads/note.txt",
-        method: "put",
-        url: "https://s3.example.backblazeb2.com/bucket/uploads/note.txt",
-      })
+      jsonResponse({ url: "/files-by-key/content?key=a.md&disposition=inline" })
     );
 
-    const file = new File(["hi"], "note.txt", { type: "text/plain" });
+    const { url } = await getPreviewUrl("a.md");
 
-    const error = await uploadFile(file).catch((e: unknown) => e);
+    expect(url).toBe(
+      "http://localhost:8000/files-by-key/content?key=a.md&disposition=inline"
+    );
+  });
 
-    expect(error).toBeInstanceOf(ApiError);
-    expect((error as ApiError).status).toBe(0);
-    expect((error as ApiError).message).toMatch(/bucket's CORS/);
-    expect((error as ApiError).message).not.toMatch(/API logs/);
+  it("leaves absolute URLs untouched", () => {
+    expect(resolveApiUrl("https://cdn.example.test/a.md")).toBe(
+      "https://cdn.example.test/a.md"
+    );
+  });
+});
 
-    // The presign succeeded; verify must never run after a failed PUT.
+describe("routePath", () => {
+  it("encodes every path parameter so an id cannot add a segment", () => {
     expect(
-      fetchMock.mock.calls.some(([input]) =>
-        String(input).includes("/upload/verify")
-      )
-    ).toBe(false);
+      routePath({ method: "get", path: "/tenants/{tenant_id}/snapshots" }, {
+        tenant_id: "a/../b",
+      })
+    ).toBe("/tenants/a%2F..%2Fb/snapshots");
+  });
+
+  it("rejects a missing parameter before any request", () => {
+    expect(() => routePath({ method: "get", path: "/reports/{run_id}" })).toThrow(
+      ApiError
+    );
+  });
+
+  it("sends tenant actions with the registry verb", async () => {
+    await parkTenant("acme-legal");
+
+    expect(requestedPath()).toBe("/tenants/acme-legal/park");
+    expect(fetchMock.mock.calls[0][1]?.method).toBe("POST");
   });
 });

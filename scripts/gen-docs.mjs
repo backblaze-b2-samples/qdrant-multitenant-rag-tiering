@@ -60,7 +60,22 @@ const AGENTS_LIMITS = AGENT_DOC_LIMITS;
 const BEGIN = /^<!--\s*gen:begin\s+([a-z0-9-]+)\s*-->$/;
 const END = /^<!--\s*gen:end\s+([a-z0-9-]+)\s*-->$/;
 
-const MODULES = [architecture, agentsDoc, readmeDoc, infraRunbooks].flat();
+/**
+ * The doc modules this manifest owns. An `infra/<target>/README.md` runbook is
+ * generated only for a target the app declares in `deployment_targets`: an app
+ * that ships no Vercel or Railway contract deletes those runbooks, and a
+ * generator that still demanded them would force dead deployment docs back in.
+ */
+function modulesFor(manifest) {
+  return [
+    architecture,
+    agentsDoc,
+    readmeDoc,
+    ...infraRunbooks.filter((module) =>
+      manifest.deployment_targets.includes(module.file.split("/")[1]),
+    ),
+  ];
+}
 
 function fail(message) {
   process.stderr.write(`gen:docs failed: ${message}\n`);
@@ -515,7 +530,8 @@ function main() {
   // that wrote as it went would leave the tree half-updated when a later file
   // failed its size guard — which is the kind of quiet mess this whole change
   // exists to remove.
-  const plan = MODULES.map((module) => {
+  const modules = modulesFor(manifest);
+  const plan = modules.map((module) => {
     const { text, changed } = applyRegions(module.file, module.regions, context);
     guardSize(module.file, text);
     return { file: module.file, text, changed };
@@ -547,7 +563,7 @@ function main() {
     }
 
     process.stdout.write(
-      `gen:docs check passed (${MODULES.length + 1} files current against ${DEFAULT_MANIFEST})\n`,
+      `gen:docs check passed (${modules.length + 1} files current against ${DEFAULT_MANIFEST})\n`,
     );
     return;
   }

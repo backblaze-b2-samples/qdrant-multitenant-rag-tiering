@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/lib/utils";
 import type { TreeFolder, TreeNode } from "@/lib/file-tree";
-import type { FileMetadata } from "@vibe-coding-starter-kit/shared";
+import type { FileMetadata } from "@qdrant-multitenant-rag-tiering/shared";
 
 const MAX_VISIBLE_TREE_DEPTH = 8;
 
@@ -77,7 +77,7 @@ interface FileTreeRowProps {
   onPreview: (file: FileMetadata) => void;
   onDownload: (file: FileMetadata) => void;
   onDelete: (file: FileMetadata) => void;
-  /** Key currently waiting on a presigned download URL, if any. */
+  /** Key currently waiting on a download URL, if any. */
   downloadingKey?: string | null;
 }
 

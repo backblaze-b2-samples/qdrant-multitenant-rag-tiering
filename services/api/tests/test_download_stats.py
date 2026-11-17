@@ -36,13 +36,6 @@ async def test_downloads_increment_stats(client, monkeypatch):
         )
 
     monkeypatch.setattr(files_service, "get_file_metadata", fake_metadata)
-    monkeypatch.setattr(
-        files_service,
-        "get_presigned_url",
-        lambda key, filename=None, disposition="attachment": (
-            "https://example.com/file"
-        ),
-    )
 
     response = await client.get("/files/stats")
     assert response.status_code == 200
@@ -58,7 +51,7 @@ async def test_downloads_increment_stats(client, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_preview_does_not_increment_downloads(client, monkeypatch):
-    """Preview returns a presigned URL without bumping the download counter."""
+    """Preview returns a content-proxy URL without bumping the download counter."""
     monkeypatch.setattr(counter, "_count", 0)
 
     def fake_metadata(key: str) -> FileMetadata:
@@ -74,17 +67,11 @@ async def test_preview_does_not_increment_downloads(client, monkeypatch):
         )
 
     monkeypatch.setattr(files_service, "get_file_metadata", fake_metadata)
-    monkeypatch.setattr(
-        files_service,
-        "get_presigned_url",
-        lambda key, filename=None, disposition="attachment": (
-            "https://example.com/preview"
-        ),
-    )
 
     for _ in range(3):
         response = await client.get("/files/uploads/test.png/preview")
         assert response.status_code == 200
-        assert response.json()["url"] == "https://example.com/preview"
+        assert response.json()["url"].startswith("/files-by-key/content?")
+        assert "disposition=inline" in response.json()["url"]
 
     assert files_service.get_download_count() == 0

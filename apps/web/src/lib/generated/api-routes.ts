@@ -11,7 +11,7 @@
 
 /** The verbs this app's routes actually use, narrowed from the contract. */
 export type ApiClientRoute = {
-  method: "delete" | "get" | "post";
+  method: "delete" | "get" | "patch" | "post";
   path: string;
 };
 
@@ -24,7 +24,9 @@ export type ApiClientRoute = {
 export const API_CLIENT_ROUTES = {
   fileByKeyDelete: { method: "delete", path: "/files-by-key" },
   legacyFileDelete: { method: "delete", path: "/files/{key}" },
+  tenantDelete: { method: "delete", path: "/tenants/{tenant_id}" },
   files: { method: "get", path: "/files" },
+  fileByKeyContent: { method: "get", path: "/files-by-key/content" },
   fileByKeyDetail: { method: "get", path: "/files-by-key/detail" },
   fileByKeyDownload: { method: "get", path: "/files-by-key/download" },
   fileByKeyMetadata: { method: "get", path: "/files-by-key/metadata" },
@@ -35,6 +37,21 @@ export const API_CLIENT_ROUTES = {
   fileStats: { method: "get", path: "/files/stats" },
   uploadActivity: { method: "get", path: "/files/stats/activity" },
   health: { method: "get", path: "/health" },
-  uploadPresign: { method: "post", path: "/upload/presign" },
-  uploadVerify: { method: "post", path: "/upload/verify" },
+  library: { method: "get", path: "/library" },
+  reports: { method: "get", path: "/reports" },
+  reportDetail: { method: "get", path: "/reports/{run_id}" },
+  tenants: { method: "get", path: "/tenants" },
+  tenantDetail: { method: "get", path: "/tenants/{tenant_id}" },
+  tenantSnapshots: { method: "get", path: "/tenants/{tenant_id}/snapshots" },
+  tieringPolicy: { method: "get", path: "/tiering/policy" },
+  tieringStats: { method: "get", path: "/tiering/stats" },
+  tenantUpdate: { method: "patch", path: "/tenants/{tenant_id}" },
+  reportRun: { method: "post", path: "/reports" },
+  snapshotsPrune: { method: "post", path: "/snapshots/prune" },
+  tenantCreate: { method: "post", path: "/tenants" },
+  tenantPark: { method: "post", path: "/tenants/{tenant_id}/park" },
+  tenantQuery: { method: "post", path: "/tenants/{tenant_id}/query" },
+  tenantRestore: { method: "post", path: "/tenants/{tenant_id}/restore" },
+  tenantSeed: { method: "post", path: "/tenants/seed" },
+  tieringRun: { method: "post", path: "/tiering/run" },
 } as const satisfies Record<string, ApiClientRoute>;

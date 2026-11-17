@@ -16,8 +16,8 @@ router = APIRouter()
 _lock = Lock()
 _request_count: dict[str, int] = defaultdict(int)
 _request_duration_sum: dict[str, float] = defaultdict(float)
-_upload_count = 0
-_upload_errors = 0
+_park_count = 0
+_restore_count = 0
 
 
 def record_request(method: str, path: str, status: int, duration: float) -> None:
@@ -28,13 +28,16 @@ def record_request(method: str, path: str, status: int, duration: float) -> None
         _request_duration_sum[key] += duration
 
 
-def record_upload(success: bool) -> None:
-    global _upload_count, _upload_errors
+def record_park() -> None:
+    global _park_count
     with _lock:
-        if success:
-            _upload_count += 1
-        else:
-            _upload_errors += 1
+        _park_count += 1
+
+
+def record_restore() -> None:
+    global _restore_count
+    with _lock:
+        _restore_count += 1
 
 
 @router.get("/metrics")
@@ -63,13 +66,13 @@ async def metrics():
                 f'http_request_duration_seconds{{method="{method}",path="{path}",status="{status}"}} {duration:.6f}'
             )
 
-        lines.append("# HELP uploads_total Total uploads")
-        lines.append("# TYPE uploads_total counter")
-        lines.append(f"uploads_total {_upload_count}")
+        lines.append("# HELP tenant_parks_total Tenants parked to B2 (verified)")
+        lines.append("# TYPE tenant_parks_total counter")
+        lines.append(f"tenant_parks_total {_park_count}")
 
-        lines.append("# HELP upload_errors_total Total upload errors")
-        lines.append("# TYPE upload_errors_total counter")
-        lines.append(f"upload_errors_total {_upload_errors}")
+        lines.append("# HELP tenant_restores_total Tenants restored from B2")
+        lines.append("# TYPE tenant_restores_total counter")
+        lines.append(f"tenant_restores_total {_restore_count}")
 
     return Response(content="\n".join(lines) + "\n", media_type="text/plain")
 

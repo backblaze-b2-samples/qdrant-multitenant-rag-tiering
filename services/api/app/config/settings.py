@@ -33,16 +33,9 @@ class Settings(BaseSettings):
     b2_region: str = ""
     b2_public_url_base: str = ""
 
-    # Slug for anything that must be namespaced per app — today the B2 CORS
-    # rule ID in scripts/setup_b2_cors.py. Python cannot import the frontend's
-    # app-config.ts, so this is the backend's declaration of the same slug:
-    # keep it equal to the package name, and derive identifiers from it rather
-    # than writing a second name a rename sweep has to know about.
-    app_slug: str = "vibe-coding-starter-kit"
-
     api_port: int = 8000
     # Interactive API docs (/docs, /redoc, /openapi.json). On by default for
-    # local dev and starter-kit exploration; set false to hide the full API
+    # local dev and exploration; set false to hide the full API
     # surface in production.
     enable_docs: bool = True
     # Explicit allowlist by default — covers Next on :3000 and the
@@ -55,12 +48,30 @@ class Settings(BaseSettings):
     # listing each one. NEVER ship this to production.
     api_cors_origin_regex: str = ""
 
-    # Upload limits
+    # Ceiling for the on-demand checksum recompute behind /files-by-key/detail,
+    # which buffers the object in memory.
     max_file_size: int = 100 * 1024 * 1024  # 100MB
-    # TTL for the presigned PUT the browser uploads directly to B2 with. Long
-    # enough for a big file on a slow link, short enough that a leaked URL is a
-    # narrow, single-key, single-size window.
-    presign_upload_expiry_seconds: int = 900  # 15 minutes
+
+    # --- Hot tier and tiering policy ---------------------------------------
+    # Qdrant node serving hot tenants. Docker Compose sets http://qdrant:6333.
+    qdrant_url: str = "http://localhost:6333"
+    # Every object this app writes lives under this prefix (corpus, snapshots,
+    # reports). The end-to-end test points it at e2e/<run-id>/rag/.
+    rag_prefix: str = "rag/"
+    # Any fastembed text model. Its vector size is read from the model and
+    # recorded in each snapshot manifest, so a restore under a different model
+    # fails loudly instead of returning wrong neighbours.
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    # A hot tenant with no query or write for this long is a parking candidate.
+    tiering_idle_seconds: int = 7 * 24 * 3600
+    # Background sweep cadence; 0 disables the sweep (manual park still works).
+    tiering_sweep_interval_seconds: int = 300
+    # Multipart part size for streaming a snapshot to B2. S3 requires >= 5 MiB
+    # for every part but the last; smaller values are raised to that floor.
+    snapshot_part_size_bytes: int = 8 * 1024 * 1024
+    # Deleting superseded snapshots is opt-in twice: this flag AND apply=true
+    # on each /snapshots/prune call.
+    snapshot_prune_enabled: bool = False
 
     # Optional confinement for key-addressed reads/deletes. Empty by default so
     # the by-key routes accept any key shape (they deliberately support nested
@@ -85,8 +96,8 @@ class Settings(BaseSettings):
     # documented in docs/RELIABILITY.md; horizontal scaling needs a shared
     # store (e.g. Redis). Writes/downloads get the tighter cap.
     rate_limit_per_minute: int = 120
-    # Covers uploads, deletes, downloads and previews — kept generous enough
-    # that a normal browsing/upload session doesn't trip it.
+    # Covers writes (POST/PATCH/DELETE), downloads, previews and content proxy
+    # reads — kept generous enough that a normal session doesn't trip it.
     rate_limit_write_per_minute: int = 60
 
     # Small durable counters (downloads, etc). Relative paths resolve against
@@ -125,6 +136,11 @@ class Settings(BaseSettings):
         edit here rather than an environment variable.
         """
         return f"https://s3.{self.b2_region}.backblazeb2.com"
+
+    @property
+    def key_prefix(self) -> str:
+        """`rag_prefix`, normalised to end in exactly one slash."""
+        return self.rag_prefix.strip("/") + "/" if self.rag_prefix.strip("/") else ""
 
     @property
     def cors_origins(self) -> list[str]:

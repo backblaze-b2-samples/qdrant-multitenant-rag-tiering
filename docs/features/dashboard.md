@@ -1,62 +1,54 @@
-<!-- last_verified: 2026-07-28 -->
+<!-- last_verified: 2026-11-17 -->
 # Feature: Dashboard
 
 ## Purpose
-Provide an at-a-glance overview of file storage usage and recent upload activity.
+Answer "how much vector memory are we spending, and how much has parking saved?"
+at a glance.
 
 ## Used By
 - UI: `/` page (dashboard home)
-- API: `GET /files/stats`, `GET /files`, `GET /files/stats/activity`
+- API: `GET /tiering/stats`, `GET /tenants`, `GET /reports`
 
 ## Core Functions
-- `apps/web/src/components/dashboard/stats-cards.tsx` — 4 stat cards, plus the on-screen loading notice while the bucket scan runs
-- `apps/web/src/components/dashboard/recent-uploads-table.tsx` — last 10 uploads
-- `apps/web/src/components/dashboard/upload-chart.tsx` — bar chart of uploads per day
-- `apps/web/src/lib/api-client.ts` — `getFileStats()`, `getFiles()`, `getUploadActivity()`
-- `services/api/app/runtime/files.py` — `GET /files/stats` handler
-- `services/api/app/service/files.py` — `get_stats()` business logic
-- `services/api/app/repo/b2_client.py` — `get_upload_stats()` data access
-- `services/api/app/repo/list_cache.py` — the shared bucket listing both `/files/stats` and `/files` read, so the dashboard and the file browser never scan twice
-- `apps/web/src/components/common/loading-notice.tsx` — visible, escalating wait copy
+- `apps/web/src/components/dashboard/stats-cards.tsx` — hot / parked / empty counts,
+  vector memory in use and freed (estimates), snapshot and corpus bytes in B2
+- `apps/web/src/components/dashboard/tenant-memory-chart.tsx` — per-tenant vector
+  footprint; hot bars solid, parked bars faded
+- `apps/web/src/components/reports/reports-list.tsx` — the five latest latency reports
+- `services/api/app/service/tiering.py` — `get_stats()`
 
 ## Canonical Files
-- Dashboard page layout: `apps/web/src/components/dashboard/stats-cards.tsx`
-- Stats service logic: `services/api/app/service/files.py`
+- Pattern exemplar: `apps/web/src/components/dashboard/stats-cards.tsx`
 
 ## Inputs
-- None (dashboard loads data automatically)
+- None (loads automatically; tenants and stats poll every 15 s because the background
+  sweep can change state without a user action)
 
 ## Outputs
-- `GET /files/stats` → `UploadStats` (total_files, total_size_bytes, total_size_human, uploads_today, total_downloads)
-- `GET /files` (limit 10) → `FileMetadata[]` for recent uploads table (sorted newest-first)
-- `GET /files/stats/activity?days=7` → `DailyUploadCount[]` for chart (server-side aggregation)
+- `TieringStats {hot, parked, empty, vector_bytes_hot, vector_bytes_freed, snapshot_bytes_b2, corpus_bytes_b2}`
 
 ## Flow
-- Page loads → three parallel API calls (stats, recent files, upload activity), all served from one cached bucket listing
-- Stats needed ~8.3s to replace the skeletons on a 16k-object bucket, so: the API warms that listing at startup and serves it stale-while-revalidate (only the very first scan after boot can block), and the cards state the wait in words while it runs instead of showing four silent placeholders
-- Stats cards display total files, storage used, uploads today, total downloads
-- Upload chart displays server-aggregated daily counts for last 7 days as bar chart after activity data is known
-- Recent uploads table shows last 10 files with filename, size, type, date, status badge. Each filename is a link to `/files?preview=<key>`, which opens that file's preview in the browser — the rows used to be inert text with no role, tabindex or handler, so the "click a file to preview it" gesture `/files` teaches did nothing here
+- Stats derive tenant states from Qdrant collections and B2 manifests, then sum
+  `points * vector_size * 4 + payload bytes` per state, and list `rag/snapshots/` and
+  `rag/corpus/` for bytes in B2.
 
 ## Edge Cases
-- API unavailable → error states with retry where supported; activity chart does not show a false zero state while loading
-- No files uploaded → empty chart message, empty table message
-- Large file count → stats endpoint paginates through all objects using `ContinuationToken`; the result is cached, so the cost is paid once (at startup) rather than per page view
-- Bucket changed by something other than this app → numbers can lag by up to `LIST_CACHE_TTL_SECONDS` (default 300s). The app's own uploads/deletes invalidate the cache, so they are never stale
+- No tenants -> zero cards and an empty chart pointing to `/tenants`
+- Qdrant down -> stats request fails, `ErrorState` with retry; the health banner names Qdrant
 
-## UX States
-- Loading: an on-screen "Loading bucket stats…" notice above the cards (escalating at 4s and 12s), with skeleton placeholders for cards, table, and upload activity chart
-- Empty: "No files uploaded yet" / "No upload data available yet"
-- Loaded: populated cards, chart, table
+## UX States (if applicable)
+- Empty: "No tenants yet" / "No reports yet"
+- Loading: skeleton cards and chart
+- Error: inline `ErrorState`
 
 ## Verification
-- Test files: `services/api/tests/test_upload_activity.py`, `services/api/tests/test_recent_files.py`, `services/api/tests/test_list_cache.py`, `apps/web/src/lib/loading-progress.test.ts`
-- Required cases: stats with files, stats with empty bucket, API error fallback, cached listing reused across stats and listing calls, loading copy escalating at its thresholds
-- Focused verify command: `pnpm test:api`
+- Test files: `services/api/tests/test_tiering_policy.py::test_stats_split_hot_and_parked`
+- Focused verify command: `cd services/api && .venv/bin/python -m pytest tests/test_tiering_policy.py -k stats`
 - Default pre-PR verify command: `pnpm verify`
-- Full local verify command: `pnpm verify:full` when the E2E/live prerequisites in [Verification](../verification.md#non-live-verification) are available
-- Pass criteria: focused tests and `pnpm verify` green; explain any skipped `pnpm verify:full` prerequisites
+- Full local verify command: `pnpm verify:full` when E2E/live prerequisites apply
+- Pass criteria: hot and parked tenants are counted separately and freed memory is non-zero after a park
 
 ## Related Docs
-- [ARCHITECTURE.md](../../ARCHITECTURE.md)
-- [App Workflows](../app-workflows.md)
+- [Tiering](tiering.md) · [Latency report](latency-report.md)
+- [README.md](../../README.md)
+- [docs/app-workflows.md](../app-workflows.md)

@@ -1,4 +1,4 @@
-name: CI
+name: qdrant-multitenant-rag-tiering CI
 
 # Runs the canonical non-live verification gate documented in AGENTS.md and
 # docs/verification.md. `pnpm verify` = `pnpm check:agent-docs &&

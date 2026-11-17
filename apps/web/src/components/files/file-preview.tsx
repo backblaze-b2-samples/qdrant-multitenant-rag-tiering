@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FileMetadataPanel } from "@/components/files/file-metadata-panel";
 import { PreviewMedia } from "@/components/files/file-preview-media";
 import { useFileDetail, usePreviewUrl } from "@/lib/queries";
-import type { FileMetadata } from "@vibe-coding-starter-kit/shared";
+import type { FileMetadata } from "@qdrant-multitenant-rag-tiering/shared";
 
 interface FilePreviewProps {
   file: FileMetadata | null;
@@ -29,7 +29,7 @@ interface FilePreviewProps {
   onDownload: (file: FileMetadata) => void;
   /** Delete the previewed file. The owner runs the confirmation step. */
   onDelete: (file: FileMetadata) => void;
-  /** Key currently waiting on a presigned download URL, if any. */
+  /** Key currently waiting on a download URL, if any. */
   downloadingKey?: string | null;
 }
 
@@ -78,9 +78,9 @@ export function FilePreview({
   onDelete,
   downloadingKey = null,
 }: FilePreviewProps) {
-  // Fetch a presigned preview URL only while the dialog is open. Falls
-  // back to the file's stored URL if the API call fails (e.g. the
-  // `/preview` endpoint is unreachable but we still have a static URL).
+  // Fetch the content-proxy preview URL only while the dialog is open. Falls
+  // back to the file's public URL if the API call fails (e.g. the `/preview`
+  // endpoint is unreachable but the bucket is public).
   const { data, isLoading, isError, error } = usePreviewUrl(
     file?.key,
     open && !!file,
@@ -109,7 +109,12 @@ export function FilePreview({
   if (!file) return null;
 
   const isImage = file.content_type.startsWith("image/");
-  const isPdf = file.content_type === "application/pdf";
+  // PDFs, text, Markdown and JSON (corpus documents, manifests, reports)
+  // render in an iframe straight from the content proxy.
+  const isPdf =
+    file.content_type === "application/pdf" ||
+    file.content_type.startsWith("text/") ||
+    file.content_type === "application/json";
   const isDownloading = downloadingKey === file.key;
   const previewError =
     isError && error instanceof Error
@@ -193,8 +198,7 @@ export function FilePreview({
           </Button>
         </div>
         {/* Detailed metadata spans the full dialog width rather than the
-            right half-column, so long checksums / EXIF / PDF rows have room
-            to breathe instead of wrapping inside a cramped box. */}
+            right half-column, so long checksums have room to breathe. */}
         <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
           <CollapsibleTrigger asChild>
             <Button

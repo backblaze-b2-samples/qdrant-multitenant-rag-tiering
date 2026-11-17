@@ -1,7 +1,8 @@
-# Human-edited inputs — lower-bound (`>=`) pins only; a regression test enforces
-# that (tests/test_dependency_lock.py). The exact resolution lives in
-# requirements.lock (used by setup and CI); regenerate it per
-# docs/dev-workflows.md#python-dependency-updates after editing this file.
+# Human-edited inputs — lower-bound (`>=`) pins, with an upper bound where a
+# window matters; a regression test enforces the lower-bound form
+# (tests/test_dependency_lock.py). The exact resolution lives in
+# requirements.lock (used by setup, CI and the Docker image); regenerate it per
+# docs/verification.md#python-dependency-updates after editing this file.
 fastapi>=0.115.0
 uvicorn[standard]>=0.34.0
 python-multipart>=0.0.18
@@ -9,11 +10,17 @@ python-dotenv>=1.0.0
 pydantic>=2.10.0
 pydantic-settings>=2.7.0
 boto3>=1.35.0
-Pillow>=13.0.0
-pypdf>=6.0.0
+# Hot tier. Held to the minor of the pinned Qdrant server image
+# (docker-compose.yml, qdrant/qdrant:v1.20.2) so client and server agree on the
+# snapshot and query APIs.
+qdrant-client>=1.20.0,<1.21
+# Local CPU embeddings (ONNX). No API key; the model downloads once from the
+# Hugging Face Hub into the fastembed cache.
+fastembed>=0.9.0,<0.10
+# Raw Qdrant HTTP for snapshot streaming (download, upload) and /metrics.
+httpx>=0.27.0
 
 # Dev / quality
 ruff>=0.8.0
 pytest>=8.0.0
 pytest-asyncio>=0.24.0
-httpx>=0.27.0

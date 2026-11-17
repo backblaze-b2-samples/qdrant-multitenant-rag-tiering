@@ -1,5 +1,4 @@
 import functools
-import io
 import mimetypes
 import time
 from datetime import UTC, datetime
@@ -51,7 +50,7 @@ def get_s3_client():
             read_timeout=30,
             retries={"mode": "standard", "total_max_attempts": 3},
             signature_version="s3v4",
-            user_agent_extra="b2ai-oss-start",
+            user_agent_extra="b2ai-qdrant-multitenant-rag-tiering",
         ),
     )
 
@@ -78,35 +77,6 @@ def check_connectivity() -> bool:
     with _health_lock:
         _health_cache = (time.monotonic(), ok)
     return ok
-
-
-def upload_file(
-    file_data: bytes, key: str, content_type: str
-) -> FileMetadata:
-    """Upload file to B2. Raises RuntimeError on S3 failure."""
-    client = get_s3_client()
-    try:
-        client.put_object(
-            Bucket=settings.b2_bucket_name,
-            Key=key,
-            Body=io.BytesIO(file_data),
-            ContentType=content_type,
-        )
-    except ClientError as e:
-        raise RuntimeError(f"B2 upload failed for '{key}': {e}") from e
-    _invalidate_list_cache()  # new object must show up in listings/stats now
-    folder, filename = _split_key(key)
-    size = len(file_data)
-    return FileMetadata(
-        key=key,
-        filename=filename,
-        folder=folder,
-        size_bytes=size,
-        size_human=humanize_bytes(size),
-        content_type=content_type,
-        uploaded_at=datetime.now(UTC),
-        url=_public_url(key),
-    )
 
 
 def _list_all_objects(prefix: str = "") -> list[dict]:
@@ -207,48 +177,6 @@ def delete_file(key: str) -> None:
     except ClientError as e:
         raise RuntimeError(f"B2 delete failed for '{key}': {e}") from e
     _invalidate_list_cache()  # deleted object must disappear from listings/stats
-
-
-DISPOSITIONS = ("attachment", "inline")
-
-
-def get_presigned_url(
-    key: str,
-    filename: str | None = None,
-    expires_in: int = 600,
-    disposition: str = "attachment",
-) -> str:
-    """Generate a presigned GET URL. Raises RuntimeError on S3 failure.
-
-    `disposition` selects the `Content-Disposition` the signed response will
-    carry. "attachment" (the default) makes browsers save the file; "inline"
-    lets them render it in place, which the preview modal needs — an
-    `attachment` response makes an `<iframe>` PDF preview impossible because
-    the browser starts a download instead of painting the document.
-    Raises ValueError for any other value.
-    """
-    if disposition not in DISPOSITIONS:
-        raise ValueError(
-            f"disposition must be one of {DISPOSITIONS}, got {disposition!r}"
-        )
-    client = get_s3_client()
-    params: dict = {"Bucket": settings.b2_bucket_name, "Key": key}
-    if filename:
-        # RFC 5987 encoding for non-ASCII filenames
-        encoded = quote(filename, safe="")
-        params["ResponseContentDisposition"] = (
-            f"{disposition}; filename=\"{encoded}\"; filename*=UTF-8''{encoded}"
-        )
-    else:
-        params["ResponseContentDisposition"] = disposition
-    try:
-        return client.generate_presigned_url(
-            "get_object",
-            Params=params,
-            ExpiresIn=expires_in,
-        )
-    except ClientError as e:
-        raise RuntimeError(f"B2 presign failed for '{key}': {e}") from e
 
 
 def get_upload_stats() -> dict:

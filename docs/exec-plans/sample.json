@@ -1,85 +1,101 @@
 {
   "$schema": "../../scripts/gen/sample.schema.json",
   "schema_version": 1,
-  "name": "Vibe Coding Starter Kit",
-  "slug": "vibe-coding-starter-kit",
-  "package_scope": "@vibe-coding-starter-kit",
-  "purpose": "A well-engineered full-stack foundation — dashboard, drag-and-drop upload and a file browser — with Backblaze B2 storage already wired in, so builders skip the boilerplate loop.",
-  "tagline": "Stop wiring boilerplate and start building.",
-  "primary_entity": { "schema": "FileMetadata", "singular": "file", "plural": "files" },
+  "name": "Qdrant Multitenant RAG Tiering",
+  "slug": "qdrant-multitenant-rag-tiering",
+  "package_scope": "@qdrant-multitenant-rag-tiering",
+  "purpose": "A multi-tenant RAG service that serves hot tenants from Qdrant, parks idle tenants' collections as verified snapshots in Backblaze B2, restores them on the next query, and measures what that costs in latency and saves in memory.",
+  "tagline": "Keep vector memory for the tenants who query; park the rest in B2.",
+  "primary_entity": { "schema": "TenantDetail", "singular": "tenant", "plural": "tenants" },
   "features": [
     {
-      "title": "File Upload",
-      "route": "/upload",
-      "doc": "docs/features/file-upload.md",
-      "summary": "drag-and-drop upload with real-time progress",
-      "workflow_heading": "Upload Files"
+      "title": "Tenants",
+      "route": "/tenants",
+      "doc": "docs/features/tenants.md",
+      "summary": "create tenants from text or Markdown files (or seed demo tenants), one Qdrant collection each, corpus in B2",
+      "workflow_heading": "Manage Tenants"
     },
     {
-      "title": "File Browser",
+      "title": "Tiering",
+      "route": "/tenants",
+      "doc": "docs/features/tiering.md",
+      "summary": "idle policy and manual park: snapshot, multipart upload to B2, manifest last, verify, then drop",
+      "workflow_heading": "Park Idle Tenants"
+    },
+    {
+      "title": "Restore on query",
+      "route": null,
+      "doc": "docs/features/restore.md",
+      "summary": "the first query to a parked tenant restores it from B2 into any Qdrant node and reports the cost"
+    },
+    {
+      "title": "Latency report",
+      "route": "/reports",
+      "doc": "docs/features/latency-report.md",
+      "summary": "benchmark warm, restore and post-restore latency plus memory freed, stored as report.json in B2",
+      "workflow_heading": "Measure the Cost of Parking"
+    },
+    {
+      "title": "Library",
+      "route": "/library",
+      "doc": "docs/features/library.md",
+      "summary": "the app's own objects under rag/, grouped by tenant and kind",
+      "workflow_heading": "Browse the App's Objects"
+    },
+    {
+      "title": "Bucket explorer",
       "route": "/files",
       "doc": "docs/features/file-browser.md",
-      "summary": "list, preview, download, delete files",
-      "workflow_heading": "Browse and Manage Files"
+      "summary": "full-bucket browse, preview, download and delete, streamed through the API",
+      "workflow_heading": "Browse the Whole Bucket"
     },
     {
       "title": "Dashboard",
       "route": "/",
       "doc": "docs/features/dashboard.md",
-      "summary": "stats cards, upload chart, recent uploads",
+      "summary": "hot, parked and empty counts, vector memory in use and freed, bytes in B2, recent reports",
       "workflow_heading": "View Dashboard"
-    },
-    {
-      "title": "Metadata Extraction",
-      "route": null,
-      "doc": "docs/features/metadata-extraction.md",
-      "summary": "image dimensions, EXIF, PDF info, checksums"
     },
     {
       "title": "Settings",
       "route": "/settings",
       "doc": "docs/features/settings.md",
-      "summary": "theme plus labelled demo preference fields",
-      "workflow_heading": "Change Preferences"
+      "summary": "read-only tiering policy and the browser theme",
+      "workflow_heading": "Check the Policy"
     }
   ],
   "b2_surface": [
-    { "operation": "put_object", "why": "store an uploaded object" },
-    { "operation": "presigned PUT", "why": "the browser uploads bytes directly to B2, bypassing the Function payload cap" },
-    { "operation": "list_objects_v2", "why": "the shared full-bucket listing behind the file list and the stats cards" },
-    { "operation": "head_object", "why": "cheap per-key metadata, and the /health connectivity probe" },
-    { "operation": "get_object", "why": "re-read bytes to recompute rich metadata on demand" },
-    { "operation": "presigned GET", "why": "download and inline preview URLs" },
-    { "operation": "delete_object", "why": "remove an object" }
+    { "operation": "put_object", "why": "tenant documents, _tenant.json, latest.json (written last) and report.json" },
+    { "operation": "create_multipart_upload / upload_part / complete_multipart_upload / abort_multipart_upload", "why": "stream a Qdrant snapshot to B2 without holding it in memory; abort on any failure so no partial object appears" },
+    { "operation": "head_object", "why": "verify snapshot size against the manifest, the /health probe (head_bucket) and file metadata" },
+    { "operation": "get_object", "why": "re-read a snapshot to verify its sha256, download it for restore, read corpus, manifests and reports, and proxy preview and download" },
+    { "operation": "list_objects_v2", "why": "bucket explorer, Library view, tenant discovery, snapshot history and report list" },
+    { "operation": "delete_object / delete_objects", "why": "bucket explorer delete, tenant delete scoped to its corpus and snapshot prefixes, opt-in snapshot prune, end-to-end test cleanup" }
   ],
-  "b2_key_prefix": "uploads/",
+  "b2_key_prefix": "rag/",
   "stack": {
     "web": "Next.js 16, React 19, Tailwind v4, shadcn/ui, TanStack Query, Recharts",
-    "api": "FastAPI, Python 3.12+, boto3, Pydantic v2, Pillow, pypdf",
-    "storage": "Backblaze B2 (S3-compatible API)",
+    "api": "FastAPI, Python 3.12, boto3, qdrant-client, fastembed, Pydantic v2",
+    "storage": "Backblaze B2 (S3-compatible API) with Qdrant v1.20.2 as the hot tier",
     "package_manager": "pnpm workspaces"
   },
-  "deployment_targets": ["vercel", "railway"],
+  "deployment_targets": [],
   "env_vars": [
     { "name": "B2_APPLICATION_KEY_ID", "required": true, "secret": true, "note": "B2 application key ID (**keyID** in the B2 console)" },
     { "name": "B2_APPLICATION_KEY", "required": true, "secret": true, "note": "B2 application key (**applicationKey**) — shown once at creation" },
     { "name": "B2_BUCKET_NAME", "required": true, "secret": false, "note": "bucket unique name (**Bucket Unique Name** in the B2 console)" },
     { "name": "B2_REGION", "required": true, "secret": false, "note": "the region inside the bucket's **Endpoint** (`s3.<region>.backblazeb2.com`); the S3 endpoint is derived from it" },
     { "name": "B2_PUBLIC_URL_BASE", "required": false, "secret": false, "note": "public object base URL, when the bucket is public" },
-    { "name": "NEXT_PUBLIC_API_URL", "required": false, "secret": false, "note": "separate-origin deploys only; Next.js inlines it at build time" }
+    { "name": "NEXT_PUBLIC_API_URL", "required": false, "secret": false, "note": "API origin the browser calls; Next.js inlines it at build time (Compose passes http://localhost:8000)" },
+    { "name": "QDRANT_URL", "required": false, "secret": false, "note": "Qdrant node for hot tenants; default http://localhost:6333, Compose sets http://qdrant:6333" },
+    { "name": "RAG_PREFIX", "required": false, "secret": false, "note": "key prefix for everything the app writes; default rag/" },
+    { "name": "EMBEDDING_MODEL", "required": false, "secret": false, "note": "any fastembed text model; default BAAI/bge-small-en-v1.5" },
+    { "name": "TIERING_IDLE_SECONDS", "required": false, "secret": false, "note": "idle time before a hot tenant is a parking candidate; default 604800 (7 days)" },
+    { "name": "TIERING_SWEEP_INTERVAL_SECONDS", "required": false, "secret": false, "note": "background sweep cadence; default 300, 0 disables it" },
+    { "name": "SNAPSHOT_PART_SIZE_BYTES", "required": false, "secret": false, "note": "multipart part size for snapshot uploads; default 8388608, minimum 5 MiB" },
+    { "name": "SNAPSHOT_PRUNE_ENABLED", "required": false, "secret": false, "note": "allow /snapshots/prune to delete superseded snapshots; default false" }
   ],
-  "attribution_token": "b2ai-oss-start",
-  "repo": { "org": "backblaze-b2-samples", "name": "vibe-coding-starter-kit" },
-  "screenshots": [
-    {
-      "path": "docs/images/b2-starterkit-dashboard1.png",
-      "alt": "Dashboard view showing stat cards, upload activity chart, and recent uploads table",
-      "caption": "**Dashboard** — stats, upload activity, and recent uploads at a glance:"
-    },
-    {
-      "path": "docs/images/b2-starterkit-fileview2.png",
-      "alt": "File browser view showing a tree of files with hover actions",
-      "caption": "**File browser** — tree view with preview, download, and delete:"
-    }
-  ]
+  "attribution_token": "b2ai-qdrant-multitenant-rag-tiering",
+  "repo": { "org": "backblaze-b2-samples", "name": "qdrant-multitenant-rag-tiering" },
+  "screenshots": []
 }

@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 import json
 import logging
 import sys
@@ -27,8 +29,19 @@ from app.config import (  # noqa: E402
     REQUIRED_B2_SETTINGS,
     settings,
 )
-from app.runtime import files, health, metrics, ratelimit, upload  # noqa: E402
+from app.runtime import (  # noqa: E402
+    files,
+    health,
+    library,
+    metrics,
+    ratelimit,
+    reports,
+    tenants,
+    tiering,
+)
 from app.service.files import warm_listing_cache  # noqa: E402
+from app.service.tiering import sweep_forever  # noqa: E402
+from app.service.warmup import warm_embedder  # noqa: E402
 
 # --- Startup validation ---
 # Required B2 settings are declared with empty-string defaults so that
@@ -74,7 +87,17 @@ async def lifespan(_app: "FastAPI"):
     # view reads a warm cache instead of watching skeletons.
     if settings.warm_list_cache_on_startup:
         warm_listing_cache()
+    # Load the embedding model off the request path (first start downloads it).
+    warm_embedder()
+    # Background tiering sweep: parks hot tenants idle past the threshold.
+    sweep = None
+    if settings.tiering_sweep_interval_seconds > 0:
+        sweep = asyncio.create_task(sweep_forever(settings.tiering_sweep_interval_seconds))
     yield
+    if sweep is not None:
+        sweep.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await sweep
 
 # --- Structured JSON logging ---
 
@@ -101,17 +124,20 @@ logging.root.setLevel(logging.INFO)
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 logging.getLogger("botocore").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+# qdrant-client and the snapshot streams log one INFO line per HTTP call.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger("api")
 
 
 # --- App setup ---
 
-API_TITLE = "Vibe Coding Starter Kit API"
+API_TITLE = "Qdrant Multitenant RAG Tiering API"
 API_DESCRIPTION = (
-    "Local API for the Vibe Coding Starter Kit template, providing file upload "
-    "and management backed by Backblaze B2. This contract documents the "
-    "template's local API, not a hosted public endpoint."
+    "Local API for Qdrant Multitenant RAG Tiering: per-tenant RAG served from a "
+    "Qdrant hot tier, with idle tenants parked as verified snapshots in "
+    "Backblaze B2 and restored on their next query. This contract documents the "
+    "sample's local API, not a hosted public endpoint."
 )
 API_VERSION = "0.1.0"
 
@@ -159,11 +185,14 @@ app.add_middleware(
     # reflect an attacker's origin *with* credentials. Flip to True only when
     # you add cookie-based auth AND have tightened the origin allowlist.
     allow_credentials=False,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
 
 app.include_router(health.router, tags=["health"])
-app.include_router(upload.router, tags=["upload"])
+app.include_router(tenants.router, tags=["tenants"])
+app.include_router(tiering.router, tags=["tiering"])
+app.include_router(reports.router, tags=["reports"])
+app.include_router(library.router, tags=["library"])
 app.include_router(files.router, tags=["files"])
 app.include_router(metrics.router, tags=["metrics"])

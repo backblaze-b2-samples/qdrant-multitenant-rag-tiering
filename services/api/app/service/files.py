@@ -1,7 +1,11 @@
+import hashlib
 import logging
+import mimetypes
 import re
 from collections import defaultdict
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
+from urllib.parse import quote, urlencode
 
 from app.config import settings
 from app.repo import (
@@ -9,13 +13,12 @@ from app.repo import (
     get_download_count,
     get_file_metadata,
     get_object_bytes,
-    get_presigned_url,
     get_upload_stats,
     increment_download_count,
     list_files,
+    open_object_stream,
     prewarm_listing,
 )
-from app.service.metadata import extract_metadata
 from app.types import FileMetadata, FileMetadataDetail, UploadStats
 from app.types.formatting import humanize_bytes
 from app.types.stats import DailyUploadCount
@@ -118,17 +121,11 @@ def get_file(key: str) -> FileMetadata:
 
 
 def get_file_detail(key: str) -> FileMetadataDetail:
-    """Recompute rich metadata (checksums, image/PDF fields) for a stored object.
+    """Recompute checksums for a stored object by re-reading it.
 
-    Extraction is not persisted and (since uploads go directly to B2) no longer
-    runs at upload, so the Files browser would otherwise only ever see the core
-    object fields. This downloads the object on demand and runs
-    `extract_metadata()`.
-
-    It buffers the whole object in memory, so we `head` first to reject objects
-    above `max_file_size` before downloading. Raises FileKeyError (invalid key),
-    FileNotFoundServiceError (missing / deleted mid-read), or
-    FileTooLargeServiceError (over the ceiling).
+    Buffers the whole object, so it heads first and refuses objects above
+    `max_file_size`. Raises FileKeyError, FileNotFoundServiceError or
+    FileTooLargeServiceError.
     """
     validate_key(key)
     metadata = get_file_metadata(key)
@@ -140,39 +137,67 @@ def get_file_detail(key: str) -> FileMetadataDetail:
             f"Max size: {humanize_bytes(settings.max_file_size)}"
         )
     data = get_object_bytes(key)
-    return extract_metadata(
-        data, metadata.filename, metadata.content_type, metadata.uploaded_at
+    filename = metadata.filename
+    return FileMetadataDetail(
+        filename=filename,
+        size_bytes=len(data),
+        size_human=humanize_bytes(len(data)),
+        mime_type=metadata.content_type
+        or mimetypes.guess_type(filename)[0]
+        or "application/octet-stream",
+        extension=filename.rsplit(".", 1)[1].lower() if "." in filename else "",
+        md5=hashlib.md5(data, usedforsecurity=False).hexdigest(),
+        sha256=hashlib.sha256(data).hexdigest(),
+        uploaded_at=metadata.uploaded_at,
     )
 
 
-def _presigned_url_for(key: str, disposition: str) -> str:
-    """Validate `key`, confirm the object exists, and presign it."""
+CONTENT_PATH = "/files-by-key/content"
+DISPOSITIONS = ("attachment", "inline")
+
+
+def _content_url(key: str, disposition: str) -> str:
+    """API-relative content-proxy URL. The browser never sees a B2 URL."""
+    validate_key(key)
+    if not get_file_metadata(key):
+        raise FileNotFoundServiceError()
+    return f"{CONTENT_PATH}?{urlencode({'key': key, 'disposition': disposition})}"
+
+
+def get_preview_url(key: str) -> str:
+    """Inline content URL. Opening a preview does not count as a download."""
+    return _content_url(key, "inline")
+
+
+def get_download_url(key: str) -> str:
+    """Attachment content URL, recorded as a download."""
+    url = _content_url(key, "attachment")
+    increment_download_count()
+    return url
+
+
+def open_content(key: str, disposition: str) -> tuple[Iterator[bytes], str, dict[str, str]]:
+    """Stream an object through the API: (chunks, content type, headers).
+
+    The bytes travel B2 -> this API's S3 client (custom user agent) -> browser,
+    instead of the browser fetching a presigned URL directly from B2.
+    """
+    if disposition not in DISPOSITIONS:
+        raise FileKeyError(f"disposition must be one of {DISPOSITIONS}")
     validate_key(key)
     metadata = get_file_metadata(key)
     if not metadata:
         raise FileNotFoundServiceError()
-    return get_presigned_url(
-        key, filename=metadata.filename, disposition=disposition
-    )
-
-
-def get_preview_url(key: str) -> str:
-    """Return an *inline* presigned URL without recording a download.
-
-    Used by the preview modal for rendering images / PDFs inline, so the URL
-    must ask B2 for `Content-Disposition: inline` — with `attachment` (the
-    download default) a browser downloads the file instead of painting it and
-    the PDF preview pane stays blank. Opening a preview is also not a
-    user-initiated download, so it must not inflate the download counter.
-    """
-    return _presigned_url_for(key, "inline")
-
-
-def get_download_url(key: str) -> str:
-    """Return an *attachment* presigned URL and record it as a download."""
-    url = _presigned_url_for(key, "attachment")
-    increment_download_count()
-    return url
+    chunks, content_type = open_object_stream(key)
+    encoded = quote(metadata.filename, safe="")
+    headers = {
+        "Content-Disposition": (
+            f"{disposition}; filename=\"{encoded}\"; filename*=UTF-8''{encoded}"
+        ),
+        "Content-Length": str(metadata.size_bytes),
+        "Cache-Control": "private, max-age=60",
+    }
+    return chunks, content_type, headers
 
 
 def remove_file(key: str) -> None:

@@ -28,4 +28,8 @@ quote-style = "double"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-markers = ["live: opt-in tests that can contact a real external service"]
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "live: opt-in tests that can contact a real external service",
+    "e2e: Docker + real B2 end-to-end tiering test (pnpm test:e2e:tiering)",
+]

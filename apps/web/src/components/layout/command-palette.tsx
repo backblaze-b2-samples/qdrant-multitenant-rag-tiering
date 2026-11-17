@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
-  Upload,
+  BarChart3,
+  Boxes,
+  Library,
   FolderOpen,
   Settings,
   Sparkles,
@@ -37,8 +39,10 @@ interface CommandPaletteProps {
 
 const routes = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Upload", href: "/upload", icon: Upload },
-  { label: "Files", href: "/files", icon: FolderOpen },
+  { label: "Tenants", href: "/tenants", icon: Boxes },
+  { label: "Latency reports", href: "/reports", icon: BarChart3 },
+  { label: "Library", href: "/library", icon: Library },
+  { label: "Bucket explorer", href: "/files", icon: FolderOpen },
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Design System", href: "/design", icon: Sparkles },
 ];
@@ -75,7 +79,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       <CommandInput placeholder="Search files or jump to a page..." />
       <CommandList>
         <CommandEmpty>
-          {/* On a route that never fetched the list (e.g. /upload) the query
+          {/* On a route that never fetched the list (e.g. /tenants) the query
               starts cold when the palette opens, so a flat "No matches found."
               told the user their file didn't exist while it was visible on the
               page behind the dialog. Say we're still looking instead. */}

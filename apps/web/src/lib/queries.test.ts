@@ -1,7 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it } from "vitest";
 import { dropDeletedFileFromCache, qk } from "@/lib/queries";
-import type { FileMetadata } from "@vibe-coding-starter-kit/shared";
+import type { FileMetadata } from "@qdrant-multitenant-rag-tiering/shared";
 
 function file(key: string): FileMetadata {
   return {
@@ -47,7 +47,7 @@ describe("dropDeletedFileFromCache", () => {
     expect(qc.getQueryData<FileMetadata[]>(qk.files("", 25))).toEqual([]);
   });
 
-  it("evicts the deleted key's presigned URL and detail so Preview can't 404", () => {
+  it("evicts the deleted key's preview URL and detail so Preview can't 404", () => {
     qc.setQueryData(qk.preview("uploads/a.txt"), { url: "https://signed" });
     qc.setQueryData(qk.detail("uploads/a.txt"), { md5: "abc" });
 

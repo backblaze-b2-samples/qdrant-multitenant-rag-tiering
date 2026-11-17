@@ -11,7 +11,7 @@ type MediaState = "loading" | "ready" | "error";
 /**
  * Renders the preview media and owns its own load state.
  *
- * The presigned-URL fetch finishing is NOT the same thing as the media being
+ * The preview-URL fetch finishing is NOT the same thing as the media being
  * painted — a large image can take seconds more, and the dialog used to drop
  * its skeleton at that first milestone and show an empty white pane that reads
  * as "no preview available". The skeleton therefore stays up until the
@@ -36,9 +36,8 @@ export function PreviewMedia({
   return (
     <div className="relative h-[min(55svh,400px)] min-h-[220px] w-full">
       {isImage ? (
-        /* `unoptimized` because presigned URLs carry their own short-lived
-           expiry and we don't want Next's image optimizer caching them past
-           that window. */
+        /* `unoptimized`: the bytes come from this app's API content proxy,
+           and Next's image optimizer would fetch and cache them a second time. */
         <Image
           src={url}
           alt={filename}

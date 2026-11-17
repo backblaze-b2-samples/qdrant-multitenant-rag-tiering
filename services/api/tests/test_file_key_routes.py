@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 
@@ -62,22 +63,14 @@ async def test_query_metadata_route_handles_reserved_key_shapes(
 async def test_query_download_route_handles_reserved_key_shapes(
     client, monkeypatch, key
 ):
-    presign_calls: list[str] = []
     monkeypatch.setattr(files_service, "get_file_metadata", _fake_metadata)
-    monkeypatch.setattr(
-        files_service,
-        "get_presigned_url",
-        lambda requested_key, filename=None, disposition="attachment": (
-            presign_calls.append(requested_key)
-            or f"https://example.test/download/{len(presign_calls)}"
-        ),
-    )
 
     response = await client.get("/files-by-key/download", params={"key": key})
 
     assert response.status_code == 200
-    assert response.json()["url"].startswith("https://example.test/download/")
-    assert presign_calls == [key]
+    url = urlparse(response.json()["url"])
+    assert url.path == "/files-by-key/content"
+    assert parse_qs(url.query) == {"key": [key], "disposition": ["attachment"]}
     assert files_service.get_download_count() == 1
 
 
@@ -86,22 +79,14 @@ async def test_query_download_route_handles_reserved_key_shapes(
 async def test_query_preview_route_handles_reserved_key_shapes(
     client, monkeypatch, key
 ):
-    presign_calls: list[str] = []
     monkeypatch.setattr(files_service, "get_file_metadata", _fake_metadata)
-    monkeypatch.setattr(
-        files_service,
-        "get_presigned_url",
-        lambda requested_key, filename=None, disposition="attachment": (
-            presign_calls.append(requested_key)
-            or f"https://example.test/preview/{len(presign_calls)}"
-        ),
-    )
 
     response = await client.get("/files-by-key/preview", params={"key": key})
 
     assert response.status_code == 200
-    assert response.json()["url"].startswith("https://example.test/preview/")
-    assert presign_calls == [key]
+    url = urlparse(response.json()["url"])
+    assert url.path == "/files-by-key/content"
+    assert parse_qs(url.query) == {"key": [key], "disposition": ["inline"]}
     assert files_service.get_download_count() == 0
 
 
@@ -141,13 +126,6 @@ async def test_query_key_routes_reject_invalid_keys(
         files_service,
         "get_file_metadata",
         lambda requested_key: repo_calls.append(requested_key) or _fake_metadata(requested_key),
-    )
-    monkeypatch.setattr(
-        files_service,
-        "get_presigned_url",
-        lambda requested_key, filename=None, disposition="attachment": (
-            repo_calls.append(requested_key) or "https://example.test/file"
-        ),
     )
     monkeypatch.setattr(
         files_service, "delete_file", lambda requested_key: repo_calls.append(requested_key)

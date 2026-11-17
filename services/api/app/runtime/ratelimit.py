@@ -5,7 +5,7 @@ the expensive list/stats endpoints or loop delete/download calls — a DoS and a
 Backblaze transaction/egress cost-amplification vector. This is a small,
 dependency-free fixed-window limiter.
 
-Scope: in-process, per replica. That's acceptable for a starter kit; horizontal
+Scope: in-process, per replica. That's acceptable for a single-node demo; horizontal
 scaling (multiple Railway replicas) needs a shared store like Redis. Documented
 in docs/RELIABILITY.md.
 """
@@ -49,13 +49,13 @@ def _client_ip(request: Request) -> str:
 def _tier_and_limit(request: Request) -> tuple[str, int]:
     """Expensive/mutating requests get the tighter 'write' cap.
 
-    `/detail` is a GET but downloads the whole object to recompute metadata, so
-    it carries the same egress/cost-amplification risk as a download and shares
-    the tighter tier.
+    `/detail` and `/content` are GETs that read whole objects from B2, so they
+    carry the same egress/cost-amplification risk as a download and share the
+    tighter tier.
     """
     path = request.url.path
-    if request.method in ("POST", "DELETE") or path.endswith(
-        ("/download", "/preview", "/detail")
+    if request.method in ("POST", "PATCH", "DELETE") or path.endswith(
+        ("/download", "/preview", "/detail", "/content")
     ):
         return "write", settings.rate_limit_write_per_minute
     return "read", settings.rate_limit_per_minute

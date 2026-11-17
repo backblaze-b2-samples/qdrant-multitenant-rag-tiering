@@ -8,20 +8,47 @@ import {
 } from "@tanstack/react-query";
 import {
   ApiError,
+  createTenant,
   deleteFile,
+  deleteTenant,
   getDownloadUrl,
   getFileDetail,
   getFiles,
   getFileStats,
   getHealth,
   getPreviewUrl,
+  getReport,
+  getTenant,
+  getTieringPolicy,
+  getTieringStats,
   getUploadActivity,
+  listLibrary,
+  listReports,
+  listTenants,
+  listTenantSnapshots,
+  parkTenant,
+  pruneSnapshots,
+  queryTenant,
+  restoreTenant,
+  runBenchmark,
+  runTiering,
+  seedTenants,
+  updateTenant,
 } from "@/lib/api-client";
 import type {
+  BenchmarkRequest,
   FileMetadata,
   FileMetadataDetail,
   FileUrlResponse,
-} from "@vibe-coding-starter-kit/shared";
+  LatencyReport,
+  PruneRequest,
+  QueryRequest,
+  QueryResponse,
+  TenantCreate,
+  TenantDetail,
+  TenantUpdate,
+  TieringRunRequest,
+} from "@qdrant-multitenant-rag-tiering/shared";
 import { qk } from "@/lib/generated/query-keys";
 
 // Query keys are GENERATED from the API contract (`pnpm gen:api`) and their
@@ -71,9 +98,9 @@ export function useUploadActivity(days = 7) {
   });
 }
 
-// Presigned preview URL — only fetched when `enabled` is true (e.g., when
-// the dialog opens for a specific file). Kept short-lived (60s) because
-// the URL itself has a presigned expiry and is cheap to regenerate.
+// Content-proxy preview URL — only fetched when `enabled` is true (e.g., when
+// the dialog opens for a specific file). Kept short-lived (60s): it is cheap to
+// regenerate and a stale one could point at a key deleted meanwhile.
 export function usePreviewUrl(key: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: qk.preview(key ?? ""),
@@ -96,10 +123,10 @@ export function useFileDetail(key: string | undefined, enabled: boolean) {
   });
 }
 
-// Health poll for the top-of-app B2 banner. `retry: false` and letting a
-// failed fetch leave `data` undefined keeps a down API silent (the
-// per-component ErrorState covers that); the banner only reacts to an up API
-// reporting b2_connected: false. Polls every 60s and on window focus.
+// Health poll for the top-of-app banner. `retry: false` and letting a failed
+// fetch leave `data` undefined keeps a down API silent (the per-component
+// ErrorState covers that); the banner only reacts to an up API reporting
+// b2_connected: false or qdrant.ok: false. Polls every 60s and on focus.
 export function useHealth() {
   return useQuery<Health>({
     queryKey: qk.health(),
@@ -129,7 +156,7 @@ export function dropDeletedFileFromCache(qc: QueryClient, fileKey: string) {
     (previous) =>
       previous ? previous.filter((file) => file.key !== fileKey) : previous,
   );
-  // A presigned URL for a deleted key can only 404 now.
+  // A content URL for a deleted key can only 404 now.
   qc.removeQueries({ queryKey: qk.preview(fileKey) });
   qc.removeQueries({ queryKey: qk.detail(fileKey) });
 }
@@ -165,6 +192,135 @@ export function useDeleteFile() {
       // activity) against the server in the background.
       dropDeletedFileFromCache(qc, fileKey);
       qc.invalidateQueries({ queryKey: qk.all });
+    },
+  });
+}
+
+// --- tenants, tiering, reports, library --------------------------------------
+//
+// Tenant state changes underneath the UI (the background sweep parks idle
+// tenants), so the tenant list and the tiering stats poll. Every mutation that
+// can change a tenant's state invalidates the tenants subtree AND the tiering
+// stats, which is what keeps the dashboard and the table in agreement.
+
+const TENANT_POLL_MS = 15_000;
+
+export function useTenants() {
+  return useQuery({
+    queryKey: qk.tenants(),
+    queryFn: listTenants,
+    refetchInterval: TENANT_POLL_MS,
+  });
+}
+
+/** The generated key covers the detail subtree; the id is appended here. */
+export const tenantKey = (tenantId: string) => [...qk.tenant(), tenantId] as const;
+export const snapshotsKey = (tenantId: string) => [...qk.tenantSnapshots(), tenantId] as const;
+export const reportKey = (runId: string) => [...qk.report(), runId] as const;
+
+export function useTenant(tenantId: string) {
+  return useQuery<TenantDetail, ApiError>({
+    queryKey: tenantKey(tenantId),
+    queryFn: () => getTenant(tenantId),
+    refetchInterval: TENANT_POLL_MS,
+    retry: (count, error) => !error.isNotFound && count < 2,
+  });
+}
+
+export function useTenantSnapshots(tenantId: string) {
+  return useQuery({
+    queryKey: snapshotsKey(tenantId),
+    queryFn: () => listTenantSnapshots(tenantId),
+  });
+}
+
+export function useTieringStats() {
+  return useQuery({
+    queryKey: qk.tieringStats(),
+    queryFn: getTieringStats,
+    refetchInterval: TENANT_POLL_MS,
+  });
+}
+
+export function useTieringPolicy() {
+  return useQuery({
+    queryKey: qk.tieringPolicy(),
+    queryFn: getTieringPolicy,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useReports() {
+  return useQuery({ queryKey: qk.reports(), queryFn: listReports });
+}
+
+export function useReport(runId: string) {
+  return useQuery<LatencyReport, ApiError>({
+    queryKey: reportKey(runId),
+    queryFn: () => getReport(runId),
+    // A written report never changes.
+    staleTime: Infinity,
+    retry: (count, error) => !error.isNotFound && count < 2,
+  });
+}
+
+export function useLibrary(tenantId?: string, kind?: string) {
+  return useQuery({
+    queryKey: qk.library(tenantId, kind),
+    queryFn: () => listLibrary(tenantId, kind),
+  });
+}
+
+/** Everything a tenant state change can make stale. */
+export function invalidateTenantState(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: qk.tenants() });
+  qc.invalidateQueries({ queryKey: [...qk.all, "tiering"] });
+  qc.invalidateQueries({ queryKey: [...qk.all, "library"] });
+  // The bucket explorer lists the same objects.
+  qc.invalidateQueries({ queryKey: [...qk.all, "files"] });
+  qc.invalidateQueries({ queryKey: qk.stats() });
+}
+
+function useTenantMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>) {
+  const qc = useQueryClient();
+  return useMutation<TResult, ApiError, TVars>({
+    mutationFn: fn,
+    onSuccess: () => invalidateTenantState(qc),
+  });
+}
+
+export const useCreateTenant = () =>
+  useTenantMutation((body: TenantCreate) => createTenant(body));
+export const useSeedTenants = () =>
+  useTenantMutation((tenantCount: number) => seedTenants({ tenant_count: tenantCount }));
+export const useUpdateTenant = (tenantId: string) =>
+  useTenantMutation((body: TenantUpdate) => updateTenant(tenantId, body));
+export const useDeleteTenant = (tenantId: string) =>
+  useTenantMutation((confirm: string) => deleteTenant(tenantId, confirm));
+export const useParkTenant = (tenantId: string) =>
+  useTenantMutation(() => parkTenant(tenantId));
+export const useRestoreTenant = (tenantId: string) =>
+  useTenantMutation(() => restoreTenant(tenantId));
+export const useRunTiering = () =>
+  useTenantMutation((body: TieringRunRequest) => runTiering(body));
+export const usePruneSnapshots = () =>
+  useTenantMutation((body: PruneRequest) => pruneSnapshots(body));
+
+/**
+ * A query is a mutation here, not a cached read: it has side effects (it can
+ * restore a parked tenant and it resets the idle clock) and every run is timed.
+ */
+export const useQueryTenant = (tenantId: string) =>
+  useTenantMutation<QueryRequest, QueryResponse>((body) => queryTenant(tenantId, body));
+
+export function useRunBenchmark() {
+  const qc = useQueryClient();
+  return useMutation<LatencyReport, ApiError, BenchmarkRequest>({
+    mutationFn: runBenchmark,
+    onSuccess: (report) => {
+      qc.setQueryData(reportKey(report.run_id), report);
+      qc.invalidateQueries({ queryKey: qk.reports() });
+      invalidateTenantState(qc);
     },
   });
 }

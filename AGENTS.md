@@ -18,8 +18,6 @@ packages/shared/   Shared TypeScript types, generated from the API contract
 docs/              System of record (features, workflows, security, reliability)
 docs/exec-plans/   Execution plans, tech debt, and sample.json (the gen:docs input)
 scripts/gen/       Generator policy: API naming, sample-manifest schema
-infra/vercel/      Vercel deployment contract
-infra/railway/     Railway delivery contract (per-service railway.json at their service roots)
 ```
 <!-- gen:end agents-repo-map -->
 
@@ -29,26 +27,30 @@ These pieces are shared scaffolding rather than app-specific code: keep them, an
 
 **Keep as-is (do not strip, rename, or replace)**
 - **UI kit / design system.** `apps/web/src/components/ui/` (shadcn primitives), the design tokens in `apps/web/src/app/globals.css`, and the `/design` reference page. Build new screens with these primitives; never edit the generated `components/ui/` files directly. Restyling happens through tokens in `globals.css`.
-- **File Explorer.** `/files` route, `apps/web/src/app/files/`, and `apps/web/src/components/files/`. The Files sidebar entry in `apps/web/src/components/layout/app-sidebar.tsx` stays.
-- **Upload.** `/upload` route, `apps/web/src/app/upload/`, and `apps/web/src/components/upload/`. The Upload sidebar entry stays.
-- The sidebar nav itself (Dashboard, Upload, Files, Settings, plus the Design System utility link).
+- **Bucket explorer.** `/files` route, `apps/web/src/app/files/`, and `apps/web/src/components/files/`: the full-bucket browse, kept even though `/library` covers the app's own objects. Its sidebar entry stays.
+- The sidebar nav itself (Dashboard, Tenants, Reports, Library, Bucket explorer, Settings, plus the Design System utility link).
+- This app removed the kit's `/upload` flow on purpose: documents arrive through tenant create/edit, and no presigned URL is ever handed to the browser (see §3).
 
 **Adapt to this app**
-- **Dashboard.** `/` route and `apps/web/src/components/dashboard/` (stats cards, upload chart, recent uploads table) are illustrative defaults. Replace them with metrics, charts, and tables that reflect what this app actually does (e.g. transcripts processed, embeddings indexed, classifications run). New aggregations must flow through the same `runtime -> service -> repo` layering and be exposed via TanStack Query hooks in `apps/web/src/lib/queries.ts` — no bare `useEffect + fetch`, and no hand-added `qk` entry: query keys come from `pnpm gen:api`.
+- **Dashboard.** `/` route and `apps/web/src/components/dashboard/` show tiering metrics (hot/parked counts, vector memory in use and freed, bytes in B2). New aggregations must flow through the same `runtime -> service -> repo` layering and be exposed via TanStack Query hooks in `apps/web/src/lib/queries.ts` — no bare `useEffect + fetch`, and no hand-added `qk` entry: query keys come from `pnpm gen:api`.
 - Update `docs/features/dashboard.md` in the same PR as any dashboard change (see §9).
 
-**Why this contract exists** — the UI kit, Files, and Upload pages are the reusable B2-backed scaffolding; stripping them costs the app its whole storage surface. The dashboard is the one screen designed to be rewritten per app.
+**Why this contract exists** — the UI kit and the bucket explorer are the reusable B2-backed scaffolding; stripping them costs the app its whole storage surface.
 
 ## 3. Architectural Invariants
 
 **Backend layering**: `types` -> `config` -> `repo` -> `service` -> `runtime`
 
 - No backward imports across layers
-- No `boto3` outside `repo/`
+- No `boto3` outside `repo/`; likewise `qdrant_client`, `httpx`, `fastembed` and `onnxruntime` (the hot tier and the embedder) stay in `repo/`
 - No business logic in route handlers (`runtime/`)
 - All external APIs wrapped in `repo/` adapters
 - All request/response data validated at boundary (Pydantic models)
 - No shared mutable state across layers
+
+**Tiering safety** (`app/service/tiering.py`): a collection is dropped only after its snapshot is fully uploaded, `latest.json` is written LAST, and size + streamed sha256 verify against it. Any failure leaves the tenant hot and puts the previous manifest back. Park, restore, edit, delete and query share one per-tenant `asyncio.Lock`. Never reorder these steps; `tests/test_park_restore_state_machine.py` guards them.
+
+**B2 traffic**: every byte goes through the one boto3 client in `app/repo/b2_client.py` (custom user agent). No presigned URLs to the browser (preview/download use the `/files-by-key/content` proxy), no Qdrant "recover from URL", no bucket configuration applied by code, and every write stays under `RAG_PREFIX` (default `rag/`).
 
 **Frontend**: shadcn/ui components in `src/components/ui/` are generated — never modify them.
 
@@ -74,6 +76,7 @@ These pieces are shared scaffolding rather than app-specific code: keep them, an
 |------|-------------|
 | No backward imports | `tests/test_structure.py::test_no_backward_imports` |
 | No boto3 outside repo/ | `tests/test_structure.py::test_boto3_only_in_repo` |
+| No Qdrant, httpx or embedding clients outside repo/ | `tests/test_structure.py::test_third_party_clients_only_in_repo` |
 | Backend app Python file size < 300 lines | `tests/test_structure.py::test_api_app_python_file_size_limit` |
 | All layers exist | `tests/test_structure.py::test_all_layers_exist` |
 | No bare print() | `ruff` rule T20 |
@@ -158,6 +161,8 @@ build). CI (`.github/workflows/ci.yml`) runs those three as parallel jobs on
 every PR and push to `main`. Use `pnpm verify:full` locally when browser/E2E and
 live-service prerequisites are available — see
 [docs/verification.md](docs/verification.md#non-live-verification) for the list.
+The primary feature's end-to-end proof is `pnpm test:e2e:tiering` (Docker plus
+real B2 credentials; parks through the policy, restores on a fresh Qdrant node).
 
 `pnpm verify` supports parallel agents when each uses a separate Git worktree;
 run it only once at a time within one checkout because Next.js locks `.next`
@@ -225,8 +230,6 @@ If documentation and implementation conflict, update docs in the same PR. Docume
 | The API contract itself | [docs/api/openapi.json](docs/api/openapi.json) |
 | Execution plans | [docs/exec-plans/](docs/exec-plans/) |
 | Tech debt | [docs/exec-plans/tech-debt-tracker.md](docs/exec-plans/tech-debt-tracker.md) |
-| Deploying to vercel | [infra/vercel/README.md](infra/vercel/README.md) |
-| Deploying to railway | [infra/railway/README.md](infra/railway/README.md) |
 <!-- gen:end agents-doc-map -->
 
 ## 11. When Unsure
@@ -244,7 +247,6 @@ If documentation and implementation conflict, update docs in the same PR. Docume
 ## 13. External Delivery
 
 - Never provision, deploy, migrate, publish, or create an externally reachable preview without the user's explicit approval.
-- For approved Railway or Vercel work, follow the selected platform's delivery
-  contract — [infra/railway/README.md](infra/railway/README.md) or
-  [infra/vercel/README.md](infra/vercel/README.md) — for configuration, review,
-  verification, rollback, and cleanup.
+- This app ships no hosted delivery contract: it runs locally with Docker Compose
+  (`docker-compose.yml`), because it needs a Qdrant node and a CPU embedding model
+  that a serverless platform cannot host.

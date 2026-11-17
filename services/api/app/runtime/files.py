@@ -5,7 +5,10 @@ import logging
 # handler runs directly on the event loop — a single slow bucket scan would
 # then stall every other request (Railway runs one worker). Starlette runs
 # sync handlers in its threadpool, giving real concurrency for B2 I/O.
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 from app.service.files import (
     FileKeyError,
@@ -18,6 +21,7 @@ from app.service.files import (
     get_preview_url,
     get_stats,
     get_upload_activity,
+    open_content,
     remove_file,
 )
 from app.types import (
@@ -113,8 +117,28 @@ def download_file_by_key_endpoint(key: str):
 
 @router.get("/files-by-key/preview", response_model=FileUrlResponse)
 def preview_file_by_key_endpoint(key: str):
-    """Return a presigned URL for inline preview. Does not count as a download."""
+    """Return the content-proxy URL for inline preview. Not counted as a download."""
     return _file_url_response(key, preview=True)
+
+
+@router.get("/files-by-key/content")
+def file_content_by_key_endpoint(
+    key: str, disposition: Literal["attachment", "inline"] = "attachment"
+):
+    """Stream an object's bytes through the API.
+
+    Replaces presigned GET URLs: the bytes are read with the backend's S3
+    client (custom user agent) and never fetched by the browser from B2.
+    """
+    try:
+        chunks, content_type, headers = open_content(key, disposition)
+    except FileKeyError as e:
+        raise HTTPException(status_code=400, detail=e.detail) from None
+    except FileNotFoundServiceError as e:
+        raise HTTPException(status_code=404, detail=e.detail) from None
+    except RuntimeError:
+        raise HTTPException(status_code=502, detail="Failed to read file from storage") from None
+    return StreamingResponse(chunks, media_type=content_type, headers=headers)
 
 
 @router.get("/files-by-key/metadata", response_model=FileMetadata)
@@ -124,11 +148,11 @@ def get_file_by_key_endpoint(key: str):
 
 @router.get("/files-by-key/detail", response_model=FileMetadataDetail)
 def get_file_detail_by_key_endpoint(key: str):
-    """Rich metadata (checksums, image/PDF fields) recomputed on demand.
+    """Checksums recomputed on demand.
 
-    Unlike /metadata (a cheap head_object), this downloads the object to
-    re-run extraction, so it is billed at the tighter 'write' rate-limit tier
-    (see runtime/ratelimit.py) to bound egress/cost amplification.
+    Unlike /metadata (a cheap head_object), this downloads the object, so it is
+    billed at the tighter 'write' rate-limit tier (see runtime/ratelimit.py) to
+    bound egress/cost amplification.
     """
     return _file_detail_response(key)
 
@@ -145,7 +169,7 @@ def download_file_endpoint(key: str):
 
 @router.get("/files/{key:path}/preview", response_model=FileUrlResponse)
 def preview_file_endpoint(key: str):
-    """Return a presigned URL for inline preview. Does not count as a download."""
+    """Return the content-proxy URL for inline preview. Not counted as a download."""
     return _file_url_response(key, preview=True)
 
 
